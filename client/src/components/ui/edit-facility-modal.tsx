@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,16 +15,17 @@ import { Badge } from "@/components/ui/badge";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { X, Plus } from "lucide-react";
 
-interface CreateFacilityModalProps {
+interface EditFacilityModalProps {
   open: boolean;
   onClose: () => void;
-  onFacilityCreated?: () => void;
+  facility: any;
+  onFacilityUpdated?: () => void;
 }
 
-export default function CreateFacilityModal({ open, onClose, onFacilityCreated }: CreateFacilityModalProps) {
+export default function EditFacilityModal({ open, onClose, facility, onFacilityUpdated }: EditFacilityModalProps) {
   const { user, token } = useAuth();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -38,66 +39,59 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
     pricePerHour: "",
     images: [] as string[],
     amenities: [] as string[],
-    operatingHours: JSON.stringify({
-      monday: { open: "06:00", close: "23:00" },
-      tuesday: { open: "06:00", close: "23:00" },
-      wednesday: { open: "06:00", close: "23:00" },
-      thursday: { open: "06:00", close: "23:00" },
-      friday: { open: "06:00", close: "23:00" },
-      saturday: { open: "06:00", close: "23:00" },
-      sunday: { open: "06:00", close: "23:00" },
-    }),
+    operatingHours: "",
   });
   const [newAmenity, setNewAmenity] = useState("");
   const [newImage, setNewImage] = useState("");
 
-  const createFacilityMutation = useMutation({
+  // Initialize form data when facility changes
+  useEffect(() => {
+    if (facility) {
+      setFormData({
+        name: facility.name || "",
+        description: facility.description || "",
+        address: facility.address || "",
+        city: facility.city || "",
+        state: facility.state || "",
+        zipCode: facility.zipCode || "",
+        sportTypes: facility.sportTypes || [],
+        pricePerHour: facility.pricePerHour?.toString() || "",
+        images: facility.images || [],
+        amenities: facility.amenities || [],
+        operatingHours: facility.operatingHours || JSON.stringify({
+          monday: { open: "06:00", close: "23:00" },
+          tuesday: { open: "06:00", close: "23:00" },
+          wednesday: { open: "06:00", close: "23:00" },
+          thursday: { open: "06:00", close: "23:00" },
+          friday: { open: "06:00", close: "23:00" },
+          saturday: { open: "06:00", close: "23:00" },
+          sunday: { open: "06:00", close: "23:00" },
+        }),
+      });
+    }
+  }, [facility]);
+
+  const updateFacilityMutation = useMutation({
     mutationFn: async (facilityData: any) => {
-      return await apiRequest("/api/facilities", "POST", facilityData);
+      return await apiRequest(`/api/facilities/${facility.id}`, "PUT", facilityData);
     },
     onSuccess: () => {
       toast({
-        title: "Facility Created",
-        description: "Your facility has been successfully added to the platform.",
+        title: "Facility Updated",
+        description: "Your facility has been successfully updated.",
       });
-      onFacilityCreated?.();
+      onFacilityUpdated?.();
       onClose();
-      resetForm();
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
     },
     onError: (error: any) => {
       toast({
-        title: "Creation Failed",
-        description: error.message || "Failed to create facility. Please try again.",
+        title: "Update Failed",
+        description: error.message || "Failed to update facility. Please try again.",
         variant: "destructive",
       });
     },
   });
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      sportTypes: [],
-      pricePerHour: "",
-      images: [],
-      amenities: [],
-      operatingHours: JSON.stringify({
-        monday: { open: "06:00", close: "23:00" },
-        tuesday: { open: "06:00", close: "23:00" },
-        wednesday: { open: "06:00", close: "23:00" },
-        thursday: { open: "06:00", close: "23:00" },
-        friday: { open: "06:00", close: "23:00" },
-        saturday: { open: "06:00", close: "23:00" },
-        sunday: { open: "06:00", close: "23:00" },
-      }),
-    });
-    setNewAmenity("");
-    setNewImage("");
-  };
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -152,7 +146,7 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
     if (!user || user.role !== "facility_owner") {
       toast({
         title: "Permission Denied",
-        description: "You must be a facility owner to create facilities.",
+        description: "You must be a facility owner to edit facilities.",
         variant: "destructive",
       });
       return;
@@ -170,17 +164,18 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
     const facilityData = {
       ...formData,
       // Keep pricePerHour as string since Drizzle decimal expects string
-      ownerId: user.id,
     };
 
-    createFacilityMutation.mutate(facilityData);
+    updateFacilityMutation.mutate(facilityData);
   };
+
+  if (!facility) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl w-[95vw] sm:w-auto max-h-[85vh] sm:max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
         <DialogHeader>
-          <DialogTitle>Add New Facility</DialogTitle>
+          <DialogTitle>Edit Facility: {facility.name}</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -307,7 +302,7 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
 
           {/* Amenities */}
           <div className="space-y-3 sm:space-y-4">
-            <span className="text-lg font-medium">Amenities</span>
+            <h3 className="text-lg font-medium">Amenities</h3>
             
             <div className="flex space-x-2">
               <Input
@@ -377,9 +372,9 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
             </Button>
             <Button 
               type="submit" 
-              disabled={createFacilityMutation.isPending}
+              disabled={updateFacilityMutation.isPending}
             >
-              {createFacilityMutation.isPending ? "Creating..." : "Create Facility"}
+              {updateFacilityMutation.isPending ? "Updating..." : "Update Facility"}
             </Button>
           </div>
         </form>

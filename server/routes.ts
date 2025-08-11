@@ -284,6 +284,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/facilities/:id", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      const facility = await storage.getFacility(req.params.id);
+      if (!facility) {
+        return res.status(404).json({ message: "Facility not found" });
+      }
+
+      // Check ownership (unless admin)
+      if (req.user.role !== "admin" && facility.ownerId !== req.user.userId) {
+        return res.status(403).json({ message: "Not authorized to delete this facility" });
+      }
+
+      // Check if there are any active bookings for this facility
+      const activeBookings = await storage.getBookingsByFacility(req.params.id);
+      const hasActiveBookings = activeBookings.some((booking: any) => 
+        new Date(booking.date) > new Date() && booking.status !== "cancelled"
+      );
+
+      if (hasActiveBookings) {
+        return res.status(400).json({ 
+          message: "Cannot delete facility with active or future bookings. Please cancel all bookings first." 
+        });
+      }
+
+      const success = await storage.hardDeleteFacility(req.params.id);
+      if (success) {
+        res.json({ message: "Facility deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete facility" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete facility", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   app.get("/api/facilities/:id/bookings", authenticateToken, async (req: any, res) => {
     try {
       const date = req.query.date ? new Date(req.query.date as string) : undefined;
@@ -416,9 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Facility owner routes
   app.get("/api/owner/facilities", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
     try {
-      console.log('Getting facilities for user:', req.user.userId, 'role:', req.user.role);
       const facilities = await storage.getFacilitiesByOwner(req.user.userId);
-      console.log('Found facilities:', facilities.length, 'facilities');
       res.json(facilities);
     } catch (error) {
       console.error('Error getting owner facilities:', error);
@@ -444,6 +477,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(ownerBookings);
     } catch (error) {
       res.status(500).json({ message: "Failed to get bookings", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Toggle facility status (active/inactive)
+  app.patch("/api/owner/facilities/:id/toggle-status", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      
+      const facility = await storage.getFacility(req.params.id);
+      if (!facility) {
+        return res.status(404).json({ message: "Facility not found" });
+      }
+
+
+      // Check ownership (unless admin)
+      if (req.user.role !== "admin" && facility.ownerId !== req.user.userId) {
+        return res.status(403).json({ message: "Not authorized to update this facility" });
+      }
+
+      const newStatus = !facility.isActive;
+      
+      const updatedFacility = await storage.updateFacility(req.params.id, { isActive: newStatus });
+      
+      if (updatedFacility) {
+        res.json({ 
+          message: `Facility ${newStatus ? 'activated' : 'deactivated'} successfully`,
+          facility: updatedFacility 
+        });
+      } else {
+        res.status(500).json({ message: "Failed to update facility status" });
+      }
+    } catch (error) {
+      console.error('Error in toggle facility status:', error);
+      res.status(500).json({ message: "Failed to toggle facility status", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 

@@ -23,6 +23,7 @@ export interface IStorage {
   createFacility(facility: InsertFacility): Promise<Facility>;
   updateFacility(id: string, updates: Partial<InsertFacility>): Promise<Facility | undefined>;
   deleteFacility(id: string): Promise<boolean>;
+  hardDeleteFacility(id: string): Promise<boolean>;
 
   // Booking operations
   getBookings(userId?: string): Promise<Booking[]>;
@@ -121,12 +122,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateFacility(id: string, updates: Partial<InsertFacility>): Promise<Facility | undefined> {
+    console.log('Storage: Updating facility', id, 'with updates:', updates);
     const [facility] = await db.update(facilities).set({...updates, updatedAt: new Date()}).where(eq(facilities.id, id)).returning();
+    console.log('Storage: Update result:', facility);
     return facility || undefined;
   }
 
   async deleteFacility(id: string): Promise<boolean> {
     const result = await db.update(facilities).set({ isActive: false, updatedAt: new Date() }).where(eq(facilities.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async hardDeleteFacility(id: string): Promise<boolean> {
+    const result = await db.delete(facilities).where(eq(facilities.id, id));
     return (result.rowCount || 0) > 0;
   }
 

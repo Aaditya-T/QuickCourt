@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import Navbar from "@/components/ui/navbar";
 import CreateFacilityModal from "@/components/ui/create-facility-modal";
+import EditFacilityModal from "@/components/ui/edit-facility-modal";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,13 +32,20 @@ import {
   MapPin,
   Star,
   Clock,
-  Eye
+  Eye,
+  Power,
+  PowerOff
 } from "lucide-react";
 
 export default function FacilityOwnerDashboard() {
   const { user, token } = useAuth();
   const { toast } = useToast();
   const [createFacilityModalOpen, setCreateFacilityModalOpen] = useState(false);
+  const [editFacilityModalOpen, setEditFacilityModalOpen] = useState(false);
+  const [facilityToEdit, setFacilityToEdit] = useState<any>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [facilityToDelete, setFacilityToDelete] = useState<any>(null);
+  const [facilityFilter, setFacilityFilter] = useState<"all" | "active" | "inactive">("all");
 
   // Fetch facilities owned by the user
   const { data: facilities = [], isLoading: facilitiesLoading } = useQuery<any[]>({
@@ -66,6 +75,45 @@ export default function FacilityOwnerDashboard() {
       toast({
         title: "Delete Failed",
         description: error.message || "Failed to delete facility.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Function to open edit modal
+  const handleEditFacility = (facility: any) => {
+    setFacilityToEdit(facility);
+    setEditFacilityModalOpen(true);
+  };
+
+  // Function to open delete confirmation
+  const handleDeleteFacility = (facility: any) => {
+    setFacilityToDelete(facility);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Toggle facility status mutation
+  const toggleFacilityStatusMutation = useMutation({
+    mutationFn: async (facilityId: string) => {
+      const response = await apiRequest(`/api/owner/facilities/${facilityId}/toggle-status`, "PATCH", {});
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      console.log('Toggle success response:', data);
+      toast({
+        title: "Status Updated",
+        description: data.message || "Facility status updated successfully.",
+      });
+      // Force refetch the facilities data
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
+      // Also try to refetch immediately
+      queryClient.refetchQueries({ queryKey: ["/api/owner/facilities"] });
+    },
+    onError: (error: any) => {
+      console.error('Toggle error:', error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update facility status.",
         variant: "destructive",
       });
     },
@@ -113,17 +161,17 @@ export default function FacilityOwnerDashboard() {
       
       {/* Header */}
       <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 Facility Owner Dashboard
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="text-gray-600 mt-2 text-sm sm:text-base">
                 Manage your facilities and track your business performance
               </p>
             </div>
-            <Button onClick={() => setCreateFacilityModalOpen(true)}>
+            <Button onClick={() => setCreateFacilityModalOpen(true)} className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Add Facility
             </Button>
@@ -131,9 +179,9 @@ export default function FacilityOwnerDashboard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-6 sm:mb-8">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center">
@@ -143,6 +191,9 @@ export default function FacilityOwnerDashboard() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Facilities</p>
                   <p className="text-2xl font-bold text-gray-900">{facilities.length}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {facilities.filter((f: any) => f.isActive).length} active, {facilities.filter((f: any) => !f.isActive).length} inactive
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -194,8 +245,8 @@ export default function FacilityOwnerDashboard() {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="facilities" className="space-y-6">
-          <TabsList>
+        <Tabs defaultValue="facilities" className="space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="facilities">My Facilities</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -214,6 +265,37 @@ export default function FacilityOwnerDashboard() {
                     Add Facility
                   </Button>
                 </CardTitle>
+                <div className="mt-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <span className="text-sm font-medium text-gray-700">Filter:</span>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant={facilityFilter === "all" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFacilityFilter("all")}
+                        className="text-xs sm:text-sm"
+                      >
+                        All ({facilities.length})
+                      </Button>
+                      <Button
+                        variant={facilityFilter === "active" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFacilityFilter("active")}
+                        className="text-xs sm:text-sm"
+                      >
+                        Active ({facilities.filter((f: any) => f.isActive).length})
+                      </Button>
+                      <Button
+                        variant={facilityFilter === "inactive" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFacilityFilter("inactive")}
+                        className="text-xs sm:text-sm"
+                      >
+                        Inactive ({facilities.filter((f: any) => !f.isActive).length})
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {facilitiesLoading ? (
@@ -243,13 +325,23 @@ export default function FacilityOwnerDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {facilities.map((facility: any) => (
-                      <FacilityCard 
-                        key={facility.id} 
-                        facility={facility}
-                        onDelete={(id) => deleteFacilityMutation.mutate(id)}
-                      />
-                    ))}
+                    {facilities
+                      .filter((facility: any) => {
+                        if (facilityFilter === "all") return true;
+                        if (facilityFilter === "active") return facility.isActive;
+                        if (facilityFilter === "inactive") return !facility.isActive;
+                        return true;
+                      })
+                      .map((facility: any) => (
+                        <FacilityCard 
+                          key={facility.id} 
+                          facility={facility}
+                          onDelete={() => handleDeleteFacility(facility)}
+                          onToggleStatus={(id) => toggleFacilityStatusMutation.mutate(id)}
+                          onEdit={() => handleEditFacility(facility)}
+                          isToggling={toggleFacilityStatusMutation.isPending}
+                        />
+                      ))}
                   </div>
                 )}
               </CardContent>
@@ -288,7 +380,7 @@ export default function FacilityOwnerDashboard() {
           </TabsContent>
 
           <TabsContent value="analytics">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Monthly Performance</CardTitle>
@@ -351,73 +443,135 @@ export default function FacilityOwnerDashboard() {
           queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
         }}
       />
+
+      {/* Edit Facility Modal */}
+      <EditFacilityModal
+        open={editFacilityModalOpen}
+        onClose={() => {
+          setEditFacilityModalOpen(false);
+          setFacilityToEdit(null);
+        }}
+        facility={facilityToEdit}
+        onFacilityUpdated={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setFacilityToDelete(null);
+        }}
+        onConfirm={() => {
+          if (facilityToDelete) {
+            deleteFacilityMutation.mutate(facilityToDelete.id);
+            setDeleteConfirmOpen(false);
+            setFacilityToDelete(null);
+          }
+        }}
+        title="Delete Facility"
+        description={`Are you sure you want to delete "${facilityToDelete?.name}"? This action cannot be undone and will remove all associated data.`}
+        confirmText="Delete Facility"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   );
 }
 
 interface FacilityCardProps {
   facility: any;
-  onDelete: (id: string) => void;
+  onDelete: () => void;
+  onToggleStatus: (id: string) => void;
+  onEdit: () => void;
+  isToggling: boolean;
 }
 
-function FacilityCard({ facility, onDelete }: FacilityCardProps) {
+function FacilityCard({ facility, onDelete, onToggleStatus, onEdit, isToggling }: FacilityCardProps) {
   const defaultImage = "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300";
 
   return (
-    <div className="flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow">
-      <div className="flex items-center space-x-4">
-        <img 
-          src={facility.images[0] || defaultImage}
-          alt={facility.name}
-          className="w-20 h-20 object-cover rounded-lg"
-        />
-        <div>
-          <h4 className="font-medium text-lg">{facility.name}</h4>
-          <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-            <span className="flex items-center">
-              <MapPin className="w-4 h-4 mr-1" />
-              {facility.city}
-            </span>
-            <span className="flex items-center">
-              <Star className="w-4 h-4 mr-1 text-yellow-400 fill-current" />
-              {facility.rating} ({facility.totalReviews})
-            </span>
+    <div className="p-4 border rounded-lg hover:shadow-sm transition-shadow overflow-hidden">
+      {/* Mobile: Stack layout, Desktop: Side by side */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+        {/* Facility Info */}
+        <div className="flex items-start space-x-4 min-w-0">
+          <img 
+            src={facility.images[0] || defaultImage}
+            alt={facility.name}
+            className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <h4 className="font-medium text-lg truncate">{facility.name}</h4>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-sm text-gray-600 mt-1 space-y-1 sm:space-y-0">
+              <span className="flex items-center min-w-0">
+                <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                <span className="truncate">{facility.city}</span>
+              </span>
+              <span className="flex items-center min-w-0">
+                <Star className="w-4 h-4 mr-1 text-yellow-400 fill-current flex-shrink-0" />
+                <span className="truncate">{facility.rating} ({facility.totalReviews})</span>
+              </span>
+            </div>
+            <p className="text-sm font-medium text-primary mt-1 truncate">
+              ₹{facility.pricePerHour}/hour <span className="text-gray-500">{facility.isActive ? "Active" : "Inactive"}</span>
+            </p>
+            {/* <div className="flex justify-center sm:justify-start">
+              <Badge variant={facility.isActive ? "default" : "secondary"}>
+                {facility.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div> */}
           </div>
-          <p className="text-sm font-medium text-primary mt-1">
-            ₹{facility.pricePerHour}/hour
-          </p>
         </div>
-      </div>
-      
-      <div className="flex items-center space-x-2">
-        <Badge variant={facility.isActive ? "default" : "secondary"}>
-          {facility.isActive ? "Active" : "Inactive"}
-        </Badge>
         
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <Eye className="w-4 h-4 mr-2" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Facility
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              className="text-red-600"
-              onClick={() => onDelete(facility.id)}
+        {/* Actions - All in one row */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+          
+          {/* Action Buttons - Icons only on mobile, icons + text on desktop */}
+          <div className="flex items-center justify-center sm:justify-start space-x-1 sm:space-x-2 max-w-full overflow-hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onEdit}
+              className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 min-w-0"
             >
-              <Trash className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <Edit className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <span className="text-blue-500 sm:inline">Edit</span>
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onToggleStatus(facility.id)}
+              disabled={isToggling}
+              className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 min-w-0"
+            >
+              {facility.isActive ? (
+                <>
+                  <PowerOff className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                  <span className="text-orange-500 sm:inline">Deactivate</span>
+                </>
+              ) : (
+                <>
+                  <Power className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span className="text-green-500 sm:inline">Activate</span>
+                </>
+              )}
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onDelete}
+              className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 min-w-0"
+            >
+              <Trash className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <span className="text-red-500 sm:inline">Delete</span>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
