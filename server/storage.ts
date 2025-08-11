@@ -1,9 +1,11 @@
 import {
   users, facilities, bookings, matches, matchParticipants, reviews, otpCodes,
+  games, facilityCourts,
   type User, type InsertUser, type Facility, type InsertFacility,
   type Booking, type InsertBooking, type Match, type InsertMatch,
   type MatchParticipant, type InsertMatchParticipant, type Review, type InsertReview,
-  type OtpCode, type InsertOtpCode
+  type OtpCode, type InsertOtpCode, type Game, type InsertGame,
+  type FacilityCourt, type InsertFacilityCourt
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, gte, lte, like, or, count, sql } from "drizzle-orm";
@@ -16,6 +18,11 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined>;
 
+  // Game operations
+  getGames(): Promise<Game[]>;
+  getGame(id: string): Promise<Game | undefined>;
+  createGame(game: InsertGame): Promise<Game>;
+
   // Facility operations
   getFacilities(filters?: { city?: string; sportType?: string; searchTerm?: string; sortBy?: string; sortOrder?: string }): Promise<Facility[]>;
   getFacility(id: string): Promise<Facility | undefined>;
@@ -25,6 +32,12 @@ export interface IStorage {
   deleteFacility(id: string): Promise<boolean>;
   hardDeleteFacility(id: string): Promise<boolean>;
 
+  // Facility Court operations
+  getFacilityCourts(facilityId: string): Promise<FacilityCourt[]>;
+  createFacilityCourt(facilityCourt: InsertFacilityCourt): Promise<FacilityCourt>;
+  updateFacilityCourt(id: string, updates: Partial<InsertFacilityCourt>): Promise<FacilityCourt | undefined>;
+  deleteFacilityCourt(id: string): Promise<boolean>;
+
   // Booking operations
   getBookings(userId?: string): Promise<Booking[]>;
   getBooking(id: string): Promise<Booking | undefined>;
@@ -33,6 +46,9 @@ export interface IStorage {
   updateBooking(id: string, updates: Partial<InsertBooking>): Promise<Booking | undefined>;
   cancelBooking(id: string): Promise<boolean>;
   updateBookingPaymentIntent(bookingId: string, paymentIntentId: string): Promise<boolean>;
+  // New court-based booking methods
+  checkCourtAvailability(facilityId: string, gameId: string, startTime: Date, endTime: Date): Promise<number | null>;
+  getAvailableCourt(facilityId: string, gameId: string, startTime: Date, endTime: Date): Promise<number | null>;
 
   // Match operations
   getMatches(filters?: { city?: string; sportType?: string; skillLevel?: string }): Promise<Match[]>;
@@ -83,6 +99,21 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined> {
     const [user] = await db.update(users).set({ ...updates, updatedAt: new Date() }).where(eq(users.id, id)).returning();
     return user || undefined;
+  }
+
+  // Game operations
+  async getGames(): Promise<Game[]> {
+    return await db.select().from(games).orderBy(asc(games.name));
+  }
+
+  async getGame(id: string): Promise<Game | undefined> {
+    const [game] = await db.select().from(games).where(eq(games.id, id));
+    return game || undefined;
+  }
+
+  async createGame(insertGame: InsertGame): Promise<Game> {
+    const [game] = await db.insert(games).values(insertGame).returning();
+    return game;
   }
 
   // Facility operations
@@ -213,6 +244,93 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount || 0) > 0;
   }
 
+  // Facility Court operations
+  async getFacilityCourts(facilityId: string): Promise<FacilityCourt[]> {
+    return await db.select().from(facilityCourts).where(eq(facilityCourts.facilityId, facilityId));
+  }
+
+  async createFacilityCourt(facilityCourt: InsertFacilityCourt): Promise<FacilityCourt> {
+    const [newFacilityCourt] = await db.insert(facilityCourts).values(facilityCourt).returning();
+    return newFacilityCourt;
+  }
+
+  async updateFacilityCourt(id: string, updates: Partial<InsertFacilityCourt>): Promise<FacilityCourt | undefined> {
+    const [facilityCourt] = await db.update(facilityCourts).set({ ...updates, updatedAt: new Date() }).where(eq(facilityCourts.id, id)).returning();
+    return facilityCourt || undefined;
+  }
+
+  async deleteFacilityCourt(id: string): Promise<boolean> {
+    const result = await db.delete(facilityCourts).where(eq(facilityCourts.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Court availability methods
+  async checkCourtAvailability(facilityId: string, gameId: string, startTime: Date, endTime: Date): Promise<number | null> {
+    // Get total courts available for this game at this facility
+    const [facilityCourt] = await db.select().from(facilityCourts)
+      .where(and(
+        eq(facilityCourts.facilityId, facilityId),
+        eq(facilityCourts.gameId, gameId)
+      ));
+
+    if (!facilityCourt) {
+      return null; // No courts available for this game at this facility
+    }
+
+    // Get all bookings that overlap with the requested time slot
+    const overlappingBookings = await db.select()
+      .from(bookings)
+      .where(and(
+        eq(bookings.facilityId, facilityId),
+        eq(bookings.gameId, gameId),
+        eq(bookings.status, 'confirmed'),
+        // Check for time overlap: booking overlaps if its start is before our end AND its end is after our start
+        sql`${bookings.startTime} < ${endTime}`,
+        sql`${bookings.endTime} > ${startTime}`
+      ));
+
+    const bookedCourts = overlappingBookings.length;
+    const availableCourts = facilityCourt.courtCount - bookedCourts;
+    
+    return availableCourts > 0 ? availableCourts : null;
+  }
+
+  async getAvailableCourt(facilityId: string, gameId: string, startTime: Date, endTime: Date): Promise<number | null> {
+    // Get total courts available for this game at this facility
+    const [facilityCourt] = await db.select().from(facilityCourts)
+      .where(and(
+        eq(facilityCourts.facilityId, facilityId),
+        eq(facilityCourts.gameId, gameId)
+      ));
+
+    if (!facilityCourt) {
+      return null; // No courts available for this game at this facility
+    }
+
+    // Get all bookings that overlap with the requested time slot
+    const overlappingBookings = await db.select()
+      .from(bookings)
+      .where(and(
+        eq(bookings.facilityId, facilityId),
+        eq(bookings.gameId, gameId),
+        eq(bookings.status, 'confirmed'),
+        sql`${bookings.startTime} < ${endTime}`,
+        sql`${bookings.endTime} > ${startTime}`
+      ));
+
+    // Find which court numbers are already booked
+    const bookedCourtNumbers = new Set(overlappingBookings.map(b => b.courtNumber));
+    
+    // Find the first available court number (starting from 1)
+    for (let courtNumber = 1; courtNumber <= facilityCourt.courtCount; courtNumber++) {
+      if (!bookedCourtNumbers.has(courtNumber)) {
+        return courtNumber;
+      }
+    }
+
+    return null; // All courts are booked
+  }
+
   // Match operations
   async getMatches(filters?: { city?: string; sportType?: string; skillLevel?: string }): Promise<Match[]> {
     let conditions = [eq(matches.status, "open")];
@@ -231,6 +349,7 @@ export class DatabaseStorage implements IStorage {
       id: matches.id,
       creatorId: matches.creatorId,
       facilityId: matches.facilityId,
+      gameId: matches.gameId,
       title: matches.title,
       description: matches.description,
       sportType: matches.sportType,

@@ -5,7 +5,7 @@ import { AuthService } from "./authService";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
-import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema, bookings } from "@shared/schema";
+import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema, insertGameSchema, insertFacilityCourtSchema, bookings } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import multer from "multer";
@@ -309,6 +309,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Games routes
+  app.get("/api/games", async (req, res) => {
+    try {
+      const games = await storage.getGames();
+      res.json(games);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get games", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.get("/api/games/:id", async (req, res) => {
+    try {
+      const game = await storage.getGame(req.params.id);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      res.json(game);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get game", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.post("/api/games", authenticateToken, requireRole(['admin']), async (req, res) => {
+    try {
+      const gameData = insertGameSchema.parse(req.body);
+      const game = await storage.createGame(gameData);
+      res.status(201).json(game);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('duplicate')) {
+        res.status(400).json({ message: "Game with this sport type already exists" });
+      } else {
+        res.status(500).json({ message: "Failed to create game", error: error instanceof Error ? error.message : "Unknown error" });
+      }
+    }
+  });
+
   // Facility routes
   app.get("/api/facilities", async (req, res) => {
     try {
@@ -419,6 +455,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Facility Courts routes
+  app.get("/api/facilities/:id/courts", async (req, res) => {
+    try {
+      const facilityCourts = await storage.getFacilityCourts(req.params.id);
+      res.json(facilityCourts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get facility courts", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.post("/api/facilities/:id/courts", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      const facility = await storage.getFacility(req.params.id);
+      if (!facility) {
+        return res.status(404).json({ message: "Facility not found" });
+      }
+
+      // Check ownership (unless admin)
+      if (req.user.role !== "admin" && facility.ownerId !== req.user.userId) {
+        return res.status(403).json({ message: "Not authorized to manage this facility's courts" });
+      }
+
+      const courtData = insertFacilityCourtSchema.parse({
+        ...req.body,
+        facilityId: req.params.id,
+      });
+      
+      const facilityCourt = await storage.createFacilityCourt(courtData);
+      res.status(201).json(facilityCourt);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid court data", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.put("/api/facility-courts/:id", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      const facilityCourt = await storage.getFacilityCourts('');
+      // TODO: Implement getFacilityCourt by ID method if needed for ownership check
+      
+      const updates = req.body;
+      const updatedFacilityCourt = await storage.updateFacilityCourt(req.params.id, updates);
+      if (!updatedFacilityCourt) {
+        return res.status(404).json({ message: "Facility court not found" });
+      }
+      res.json(updatedFacilityCourt);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update facility court", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.delete("/api/facility-courts/:id", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      const success = await storage.deleteFacilityCourt(req.params.id);
+      if (success) {
+        res.json({ message: "Facility court deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Facility court not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete facility court", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Court availability check endpoint
+  app.post("/api/facilities/:id/courts/check-availability", async (req, res) => {
+    try {
+      const { gameId, startTime, endTime } = req.body;
+      
+      if (!gameId || !startTime || !endTime) {
+        return res.status(400).json({ message: "gameId, startTime, and endTime are required" });
+      }
+
+      const startDateTime = new Date(startTime);
+      const endDateTime = new Date(endTime);
+      
+      const availableCourts = await storage.checkCourtAvailability(req.params.id, gameId, startDateTime, endDateTime);
+      const availableCourtNumber = await storage.getAvailableCourt(req.params.id, gameId, startDateTime, endDateTime);
+      
+      res.json({
+        available: availableCourts !== null,
+        availableCourtCount: availableCourts || 0,
+        nextAvailableCourtNumber: availableCourtNumber
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to check court availability", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   // Booking routes
   app.get("/api/bookings", authenticateToken, async (req: any, res) => {
     try {
@@ -432,14 +556,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/bookings", authenticateToken, async (req: any, res) => {
     try {
       // Convert data types to match schema expectations
-      const { date, startTime, endTime, totalAmount, ...restData } = req.body;
+      const { date, startTime, endTime, totalAmount, facilityId, gameId, ...restData } = req.body;
+      
+      // First, check if courts are available and get an available court number
+      const startDateTime = new Date(startTime);
+      const endDateTime = new Date(endTime);
+      
+      const availableCourtNumber = await storage.getAvailableCourt(facilityId, gameId, startDateTime, endDateTime);
+      
+      if (!availableCourtNumber) {
+        return res.status(400).json({ message: "No courts available for the selected time slot" });
+      }
       
       const bookingData = insertBookingSchema.parse({
         ...restData,
         userId: req.user.userId,
+        facilityId,
+        gameId,
+        courtNumber: availableCourtNumber,
         date: new Date(date),
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
+        startTime: startDateTime,
+        endTime: endDateTime,
         totalAmount: typeof totalAmount === 'number' ? totalAmount.toString() : totalAmount,
       });
       

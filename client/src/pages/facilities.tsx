@@ -20,13 +20,11 @@ import { Search, Filter, MapPin, Trophy, ArrowUpDown } from "lucide-react";
 
 
 
-const sportIcons: Record<string, string> = {
-  badminton: "🏸",
-  tennis: "🎾",
-  basketball: "🏀",
-  football: "⚽",
-  table_tennis: "🏓",
-  squash: "🎯",
+type Game = {
+  id: string;
+  name: string;
+  emoji: string;
+  sportType: string;
 };
 
 export default function Facilities() {
@@ -52,6 +50,16 @@ export default function Facilities() {
       sortOrder: params.get("sortOrder") || "desc",
     });
   }, [location]);
+
+  // Fetch all games for sport filter
+  const { data: allGames = [] } = useQuery<Game[]>({
+    queryKey: ["/api/games"],
+    queryFn: async () => {
+      const res = await fetch(`/api/games`);
+      if (!res.ok) throw new Error("Failed to fetch games");
+      return res.json();
+    },
+  });
 
   // Fetch facilities with filters
   const { data: facilities = [], isLoading, error } = useQuery({
@@ -192,12 +200,11 @@ export default function Facilities() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">🏆 All Sports</SelectItem>
-                      <SelectItem value="badminton">{sportIcons.badminton} Badminton</SelectItem>
-                      <SelectItem value="tennis">{sportIcons.tennis} Tennis</SelectItem>
-                      <SelectItem value="basketball">{sportIcons.basketball} Basketball</SelectItem>
-                      <SelectItem value="football">{sportIcons.football} Football</SelectItem>
-                      <SelectItem value="table_tennis">{sportIcons.table_tennis} Table Tennis</SelectItem>
-                      <SelectItem value="squash">{sportIcons.squash} Squash</SelectItem>
+                      {allGames.map((game) => (
+                        <SelectItem key={game.id} value={game.sportType}>
+                          {game.emoji} {game.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -269,7 +276,7 @@ export default function Facilities() {
             <div className="text-gray-600">
               <span className="font-semibold text-gray-800">{facilities.length}</span> facilities found
               {filters.city && <span> in <span className="font-medium">{filters.city}</span></span>}
-              {filters.sportType && <span> for <span className="font-medium">{sportIcons[filters.sportType]} {filters.sportType}</span></span>}
+              {filters.sportType && <span> for <span className="font-medium">{allGames.find(game => game.sportType === filters.sportType)?.emoji} {allGames.find(game => game.sportType === filters.sportType)?.name}</span></span>}
             </div>
             <div className="text-sm text-gray-500">
               Sorted by {filters.sortBy === 'rating' ? '⭐ Rating' : filters.sortBy === 'price' ? '💰 Price' : '📝 Name'} 
@@ -311,7 +318,7 @@ export default function Facilities() {
                   <div className="text-sm space-y-1">
                     {filters.searchTerm && <div>• Search: "{filters.searchTerm}"</div>}
                     {filters.city && <div>• Location: {filters.city}</div>}
-                    {filters.sportType && <div>• Sport: {sportIcons[filters.sportType]} {filters.sportType}</div>}
+                    {filters.sportType && <div>• Sport: {allGames.find(game => game.sportType === filters.sportType)?.emoji} {allGames.find(game => game.sportType === filters.sportType)?.name}</div>}
                     {filters.priceRange && <div>• Price: {filters.priceRange}</div>}
                   </div>
                   <p className="mt-4">Try adjusting your filters or browse all available facilities.</p>

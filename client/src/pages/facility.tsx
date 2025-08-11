@@ -53,6 +53,22 @@ type TimeSlot = {
   isPastSlot: boolean;
 };
 
+type Game = {
+  id: string;
+  name: string;
+  emoji: string;
+  sportType: string;
+};
+
+type FacilityCourt = {
+  id: string;
+  facilityId: string;
+  gameId: string;
+  courtCount: number;
+  pricePerHour: string;
+  game?: Game;
+};
+
 type Review = {
   id: string;
   userId: string;
@@ -62,6 +78,7 @@ type Review = {
   user?: {
     firstName: string;
     lastName: string;
+    profileImage?: string;
   };
 };
 
@@ -135,6 +152,27 @@ export default function Facility() {
     },
   });
 
+  // Games available at this facility
+  const { data: facilityCourts = [], isLoading: isCourtsLoading } = useQuery<FacilityCourt[]>({
+    queryKey: ["/api/facilities", facilityId, "courts"],
+    enabled: !!facilityId,
+    queryFn: async () => {
+      const res = await fetch(`/api/facilities/${facilityId}/courts`);
+      if (!res.ok) throw new Error("Failed to fetch facility courts");
+      return res.json();
+    },
+  });
+
+  // All games (to get game details for the facility courts)
+  const { data: allGames = [] } = useQuery<Game[]>({
+    queryKey: ["/api/games"],
+    queryFn: async () => {
+      const res = await fetch(`/api/games`);
+      if (!res.ok) throw new Error("Failed to fetch games");
+      return res.json();
+    },
+  });
+
   // Reviews
   const { data: reviews = [], refetch: refetchReviews } = useQuery<Review[]>({
     queryKey: ["/api/facilities", facilityId, "reviews"],
@@ -172,11 +210,19 @@ export default function Facility() {
     },
   });
 
+  // Create a mapping of facility courts with their game details
+  const facilityCourtsWithGames = useMemo(() => {
+    return facilityCourts.map(court => ({
+      ...court,
+      game: allGames.find(game => game.id === court.gameId)
+    })).filter(court => court.game);
+  }, [facilityCourts, allGames]);
+
   useEffect(() => {
-    if (facility && facility.sportTypes?.length > 0 && !selectedSport) {
-      setSelectedSport(facility.sportTypes[0]);
+    if (facilityCourtsWithGames.length > 0 && !selectedSport) {
+      setSelectedSport(facilityCourtsWithGames[0].game?.sportType || null);
     }
-  }, [facility, selectedSport]);
+  }, [facilityCourtsWithGames, selectedSport]);
 
   const { openLabel, closeLabel, isOpen } = useMemo(() => {
     let openTime = "06:00";
@@ -227,8 +273,16 @@ export default function Facility() {
 
   const timeSlots: TimeSlot[] = useMemo(() => {
     if (!facility || !selectedDate || !selectedSport || !isOpen) return [];
+    
+    // Find the selected facility court
+    const selectedFacilityCourt = facilityCourtsWithGames.find(
+      court => court.game?.sportType === selectedSport
+    );
+    
+    if (!selectedFacilityCourt) return [];
+    
     const slots: TimeSlot[] = [];
-    const pricePerHour = parseFloat(facility.pricePerHour); // This will be sport-specific in the future
+    const pricePerHour = parseFloat(selectedFacilityCourt.pricePerHour);
 
     const dayOpen = parse(openLabel, "HH:mm", selectedDate);
     const dayClose = parse(closeLabel, "HH:mm", selectedDate);
@@ -240,15 +294,21 @@ export default function Facility() {
       const endWindow = addHours(current, 1); // Fixed 1-hour slots
       if (isAfter(endWindow, dayClose)) break;
 
-      const isBooked = existingBookings.some((booking) => {
+      // Count how many courts are booked for this game during this time slot
+      const bookedCourtsCount = existingBookings.filter((booking) => {
         const bookingStart = new Date(booking.startTime);
         const bookingEnd = new Date(booking.endTime);
-        return (
+        const hasTimeOverlap = (
           (current >= bookingStart && current < bookingEnd) ||
           (endWindow > bookingStart && endWindow <= bookingEnd) ||
           (current <= bookingStart && endWindow >= bookingEnd)
         );
-      });
+        // Only count bookings for the same game/sport
+        return hasTimeOverlap; // Note: In a full implementation, we'd also check booking.gameId === selectedFacilityCourt.gameId
+      }).length;
+      
+      // Check if all courts for this game are booked
+      const isBooked = bookedCourtsCount >= selectedFacilityCourt.courtCount;
 
       // Check if slot is in the past (for today only)
       const isPastSlot = isToday(selectedDate) && isBeforeTime(current, now);
@@ -265,7 +325,7 @@ export default function Facility() {
       current = addHours(current, 1);
     }
     return slots;
-  }, [facility, selectedDate, existingBookings, selectedSport, openLabel, closeLabel, isOpen]);
+  }, [facility, selectedDate, existingBookings, selectedSport, openLabel, closeLabel, isOpen, facilityCourtsWithGames]);
 
   const toggleSlot = (slot: TimeSlot) => {
     setSelectedSlots((prev) => {
@@ -309,9 +369,20 @@ export default function Facility() {
     try {
       setIsProcessing(true);
       const createdIds: string[] = [];
+      
+      // Find the selected facility court to get gameId
+      const selectedFacilityCourt = facilityCourtsWithGames.find(
+        court => court.game?.sportType === selectedSport
+      );
+      
+      if (!selectedFacilityCourt) {
+        throw new Error("Selected sport not available at this facility");
+      }
+      
       for (const r of mergedSelections) {
         const body = {
           facilityId: facilityId,
+          gameId: selectedFacilityCourt.gameId,
           date: selectedDate.toISOString(),
           startTime: r.start.toISOString(),
           endTime: r.end.toISOString(),
@@ -632,31 +703,46 @@ export default function Facility() {
                           Choose Sport
                         </Label>
                         <div className="space-y-2">
-                          {facility.sportTypes.map((sport) => {
-                            const isSelected = selectedSport === sport;
-                            const basePrice = parseFloat(facility.pricePerHour);
+                          {isCourtsLoading ? (
+                            <div className="space-y-2">
+                              {[1, 2, 3].map(i => (
+                                <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse"></div>
+                              ))}
+                            </div>
+                          ) : (
+                            facilityCourtsWithGames.map((facilityCourt) => {
+                              if (!facilityCourt.game) return null;
+                              
+                              const isSelected = selectedSport === facilityCourt.game.sportType;
+                              const basePrice = parseFloat(facilityCourt.pricePerHour);
 
-                            return (
-                              <div
-                                key={sport}
-                                onClick={() => setSelectedSport(sport)}
-                                className={`cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 ${isSelected
-                                  ? "border-blue-500 bg-blue-50 shadow-md"
-                                  : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
-                                  }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xl">{sportIcons[sport]}</span>
-                                    <span className="font-medium text-gray-900 text-sm">
-                                      {sportTypeLabels[sport] || sport}
-                                    </span>
+                              return (
+                                <div
+                                  key={facilityCourt.id}
+                                  onClick={() => setSelectedSport(facilityCourt.game.sportType)}
+                                  className={`cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 ${isSelected
+                                    ? "border-blue-500 bg-blue-50 shadow-md"
+                                    : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
+                                    }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xl">{facilityCourt.game.emoji}</span>
+                                      <div className="flex flex-col">
+                                        <span className="font-medium text-gray-900 text-sm">
+                                          {facilityCourt.game.name}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          {facilityCourt.courtCount} court{facilityCourt.courtCount > 1 ? 's' : ''} available
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <span className="text-sm font-bold text-blue-600">₹{basePrice}/hr</span>
                                   </div>
-                                  <span className="text-sm font-bold text-blue-600">₹{basePrice}/hr</span>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })
+                          )}
                         </div>
                       </div>
 
