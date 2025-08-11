@@ -9,7 +9,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
 import { format, addHours, parse, isBefore, isAfter } from "date-fns";
 import { Clock, MapPin, Star } from "lucide-react";
 
@@ -49,7 +48,6 @@ export default function BookingModal({ facility, open, onClose, onBookingComplet
   const [notes, setNotes] = useState("");
   const { user, token } = useAuth();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -83,36 +81,13 @@ export default function BookingModal({ facility, open, onClose, onBookingComplet
     mutationFn: async (bookingData: any) => {
       return await apiRequest("/api/bookings", "POST", bookingData);
     },
-    onSuccess: (response: any) => {
-      // If payment is required (has clientSecret), redirect to payment page
-      if (response.clientSecret) {
-        // Store booking and payment info in localStorage for the payment page
-        localStorage.setItem('pendingBooking', JSON.stringify({
-          bookingId: response.id,
-          clientSecret: response.clientSecret,
-          facility: facility,
-          amount: response.totalAmount,
-          date: selectedDate?.toISOString(),
-          timeSlot: selectedTimeSlot
-        }));
-        
-        toast({
-          title: "Booking Created",
-          description: "Redirecting to payment...",
-        });
-        
-        // Redirect to payment page
-        setLocation('/payment-checkout');
-        onClose();
-      } else {
-        // Free booking or payment not required
-        toast({
-          title: "Booking Confirmed",
-          description: "Your booking has been successfully created.",
-        });
-        onBookingComplete?.();
-        onClose();
-      }
+    onSuccess: () => {
+      toast({
+        title: "Booking Confirmed",
+        description: "Your booking has been successfully created.",
+      });
+      onBookingComplete?.();
+      onClose();
     },
     onError: (error: any) => {
       toast({

@@ -10,16 +10,11 @@ import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import Facilities from "@/pages/facilities";
-import Facility from "@/pages/facility";
 import Matches from "@/pages/matches";
 import Dashboard from "@/pages/dashboard";
 import FacilityOwnerDashboard from "@/pages/facility-owner-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
-import StripePayment from "@/pages/stripe-payment";
-import PaymentSuccess from "@/pages/payment-success";
-import PaymentCheckout from "@/pages/payment-checkout";
-import Bookings from "@/pages/bookings";
 
 function Router() {
   return (
@@ -27,11 +22,6 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
-      <Route path="/facilities/:id">
-        <RouteGuard allowedRoles={["user", "admin"]}>
-          <Facility />
-        </RouteGuard>
-      </Route>
       <Route path="/facilities">
         <RouteGuard allowedRoles={["user", "admin"]}>
           <Facilities />
@@ -47,11 +37,6 @@ function Router() {
           <Dashboard />
         </RouteGuard>
       </Route>
-      <Route path="/bookings">
-        <RouteGuard allowedRoles={["user", "admin"]}>
-          <Bookings />
-        </RouteGuard>
-      </Route>
       <Route path="/facility-owner">
         <RouteGuard allowedRoles={["facility_owner"]}>
           <FacilityOwnerDashboard />
@@ -60,21 +45,6 @@ function Router() {
       <Route path="/admin">
         <RouteGuard allowedRoles={["admin"]}>
           <AdminDashboard />
-        </RouteGuard>
-      </Route>
-      <Route path="/stripe-payment">
-        <RouteGuard allowedRoles={["user", "facility_owner", "admin"]}>
-          <StripePayment />
-        </RouteGuard>
-      </Route>
-      <Route path="/payment-success">
-        <RouteGuard allowedRoles={["user"]}>
-          <PaymentSuccess />
-        </RouteGuard>
-      </Route>
-      <Route path="/payment-checkout">
-        <RouteGuard allowedRoles={["user", "facility_owner", "admin"]}>
-          <PaymentCheckout />
         </RouteGuard>
       </Route>
       <Route component={NotFound} />
