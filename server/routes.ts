@@ -892,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Image upload routes
-  app.post("/api/upload/image", authenticateToken, upload.single('image'), async (req: any, res) => {
+  app.post("/api/upload/image", upload.single('image'), async (req: any, res) => {
     // Handle multer errors
     if (req.fileValidationError) {
       return res.status(400).json({ message: req.fileValidationError });
@@ -902,8 +902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasFile: !!req.file,
         fileSize: req.file?.size,
         fileType: req.file?.mimetype,
-        fileName: req.file?.originalname,
-        user: req.user
+        fileName: req.file?.originalname
       });
 
       if (!req.file) {
