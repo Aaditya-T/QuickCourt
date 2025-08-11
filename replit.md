@@ -43,6 +43,8 @@ Preferred communication style: Simple, everyday language.
 ### Authentication & Authorization
 - **Multi-role system**: Different access levels for users, facility owners, and administrators
 - **JWT tokens**: Stateless authentication with localStorage persistence
+- **OTP Authentication**: Integrated email verification system using Resend API with toggle switches in login/signup forms
+- **Dual auth methods**: Users can choose between traditional password or secure email code authentication
 - **Protected routes**: Role-based route protection on both client and server
 - **Middleware authentication**: Server-side token verification for API endpoints
 

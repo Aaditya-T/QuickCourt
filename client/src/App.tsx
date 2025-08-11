@@ -8,8 +8,6 @@ import { AuthContext, useAuthProvider } from "./lib/auth";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
-import LoginOTP from "@/pages/login-otp";
-import SignupOTP from "@/pages/signup-otp";
 import Facilities from "@/pages/facilities";
 import Matches from "@/pages/matches";
 import Dashboard from "@/pages/dashboard";
@@ -23,8 +21,6 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
-      <Route path="/login-otp" component={LoginOTP} />
-      <Route path="/signup-otp" component={SignupOTP} />
       <Route path="/facilities" component={Facilities} />
       <Route path="/matches" component={Matches} />
       <Route path="/dashboard" component={Dashboard} />
