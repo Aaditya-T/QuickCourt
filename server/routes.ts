@@ -1249,6 +1249,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin-only routes
+  app.get("/api/admin/users", authenticateToken, requireRole(['admin']), async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.get("/api/admin/bookings", authenticateToken, requireRole(['admin']), async (req, res) => {
+    try {
+      const bookings = await storage.getBookings();
+      res.json(bookings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch bookings", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/role", authenticateToken, requireRole(['admin']), async (req, res) => {
+    try {
+      const { role } = req.body;
+      if (!['user', 'facility_owner', 'admin'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      const success = await storage.updateUserRole(req.params.id, role);
+      if (success) {
+        res.json({ message: "User role updated successfully" });
+      } else {
+        res.status(404).json({ message: "User not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user role", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.patch("/api/admin/facilities/:id/approve", authenticateToken, requireRole(['admin']), async (req, res) => {
+    try {
+      const { isApproved, rejectionReason } = req.body;
+      const success = await storage.updateFacilityApproval(req.params.id, isApproved, rejectionReason, req.user.userId);
+      if (success) {
+        res.json({ message: `Facility ${isApproved ? 'approved' : 'rejected'} successfully` });
+      } else {
+        res.status(404).json({ message: "Facility not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update facility approval", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

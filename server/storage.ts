@@ -72,6 +72,11 @@ export interface IStorage {
   getValidOtpCode(email: string, code: string, type: string): Promise<OtpCode | undefined>;
   markOtpCodeAsUsed(id: string): Promise<boolean>;
   cleanupExpiredOtpCodes(): Promise<boolean>;
+
+  // Admin operations
+  getAllUsers(): Promise<User[]>;
+  updateUserRole(id: string, role: string): Promise<boolean>;
+  updateFacilityApproval(id: string, isApproved: boolean, rejectionReason?: string, approvedBy?: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -522,6 +527,32 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(otpCodes)
       .where(lte(otpCodes.expiresAt, new Date()));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Admin operations
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserRole(id: string, role: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ role: role as any, updatedAt: new Date() })
+      .where(eq(users.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async updateFacilityApproval(id: string, isApproved: boolean, rejectionReason?: string, approvedBy?: string): Promise<boolean> {
+    const result = await db
+      .update(facilities)
+      .set({ 
+        isApproved,
+        rejectionReason,
+        approvedBy,
+        updatedAt: new Date() 
+      })
+      .where(eq(facilities.id, id));
     return (result.rowCount || 0) > 0;
   }
 }

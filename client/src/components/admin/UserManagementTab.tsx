@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 interface User {
-  id: number;
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -31,17 +31,18 @@ interface User {
   role: string;
   isActive: boolean;
   createdAt: string;
-  lastActive: string;
+  updatedAt: string;
 }
 
 interface UserManagementTabProps {
   users: User[];
   isLoading: boolean;
+  onUpdateUserRole: (userId: string, role: string) => void;
 }
 
-export default function UserManagementTab({ users, isLoading }: UserManagementTabProps) {
+export default function UserManagementTab({ users, isLoading, onUpdateUserRole }: UserManagementTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const filteredUsers = users.filter(user =>
     user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,24 +51,19 @@ export default function UserManagementTab({ users, isLoading }: UserManagementTa
     user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleBanUser = (userId: number) => {
-    if (confirm('Are you sure you want to ban this user?')) {
-      alert(`User ${userId} has been banned.`);
+  const handleRoleChange = (userId: string, newRole: string) => {
+    if (confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
+      onUpdateUserRole(userId, newRole);
       setOpenDropdown(null);
     }
   };
 
-  const handleViewUser = (userId: number) => {
+  const handleViewUser = (userId: string) => {
     alert(`Viewing user details for user ${userId}`);
     setOpenDropdown(null);
   };
 
-  const handleEditUser = (userId: number) => {
-    alert(`Editing user ${userId}`);
-    setOpenDropdown(null);
-  };
-
-  const toggleDropdown = (userId: number) => {
+  const toggleDropdown = (userId: string) => {
     setOpenDropdown(openDropdown === userId ? null : userId);
   };
 
@@ -190,18 +186,21 @@ export default function UserManagementTab({ users, isLoading }: UserManagementTa
                           <Eye className="w-4 h-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditUser(user.id)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit User
-                        </DropdownMenuItem>
-                        {user.isActive && (
-                          <DropdownMenuItem 
-                            onClick={() => handleBanUser(user.id)}
-                            className="text-red-600"
-                          >
-                            <UserX className="w-4 h-4 mr-2" />
-                            Ban User
-                          </DropdownMenuItem>
+                        {user.role !== "admin" && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleRoleChange(user.id, "user")}>
+                              <Shield className="w-4 h-4 mr-2" />
+                              Make User
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRoleChange(user.id, "facility_owner")}>
+                              <Shield className="w-4 h-4 mr-2" />
+                              Make Owner
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRoleChange(user.id, "admin")}>
+                              <Shield className="w-4 h-4 mr-2" />
+                              Make Admin
+                            </DropdownMenuItem>
+                          </>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>

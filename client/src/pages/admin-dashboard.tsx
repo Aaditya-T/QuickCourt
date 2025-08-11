@@ -72,37 +72,48 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
 
+  // User role update mutation
+  const updateUserRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      const response = await fetch(`/api/admin/users/${userId}/role`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role }),
+      });
+      if (!response.ok) throw new Error('Failed to update user role');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User role updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update user role",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Fetch all users
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ["/api/admin/users"],
     enabled: !!user && !!token && user.role === "admin",
     queryFn: async () => {
-      // This would require admin-only endpoints
-      // For now, return mock data as placeholder
-      return [
-        {
-          id: 1,
-          firstName: "Alice",
-          lastName: "Johnson",
-          email: "alice@example.com",
-          username: "alice_j",
-          role: "user",
-          isActive: true,
-          createdAt: "2024-01-10",
-          lastActive: "2024-01-20"
+      const response = await fetch("/api/admin/users", {
+        headers: {
+          'Authorization': `Bearer ${token}`,
         },
-        {
-          id: 2,
-          firstName: "Bob",
-          lastName: "Smith",
-          email: "bob@example.com",
-          username: "bob_smith",
-          role: "facility_owner",
-          isActive: true,
-          createdAt: "2024-01-05",
-          lastActive: "2024-01-19"
-        }
-      ];
+      });
+      if (!response.ok) throw new Error("Failed to fetch users");
+      return response.json();
     },
   });
 
@@ -126,19 +137,13 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/bookings"],
     enabled: !!user && !!token && user.role === "admin",
     queryFn: async () => {
-      // This would require admin-only endpoints
-      // For now, return mock data as placeholder
-      return [
-        {
-          id: 1,
-          facilityId: 1,
-          userId: 1,
-          date: "2024-01-20",
-          totalAmount: 800,
-          status: "confirmed",
-          createdAt: "2024-01-18"
-        }
-      ];
+      const response = await fetch("/api/admin/bookings", {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to fetch bookings");
+      return response.json();
     },
   });
 
@@ -445,7 +450,11 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="user-management">
-            <UserManagementTab users={users} isLoading={usersLoading} />
+            <UserManagementTab 
+              users={users} 
+              isLoading={usersLoading} 
+              onUpdateUserRole={(userId, role) => updateUserRoleMutation.mutate({ userId, role })} 
+            />
           </TabsContent>
 
           <TabsContent value="reports">
