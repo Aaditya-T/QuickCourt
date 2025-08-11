@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, CreditCard } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
 import axios from 'axios';
 
 // Initialize Stripe
@@ -153,10 +154,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 };
 
 const StripePayment: React.FC = () => {
+  const { user } = useAuth();
+  
+  // Get amount and booking IDs from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const amount = parseFloat(urlParams.get('amount') || '0');
+  const bookingIds = urlParams.get('bookingIds') || '';
+  
   const [paymentData] = useState({
-    name: 'Vikas',
-    amount: 1000,
-    number: '9999999999',
+    name: user ? `${user.firstName} ${user.lastName}` : 'Guest User',
+    amount: amount,
+    number: user?.phone || '9999999999',
   });
 
   const handlePaymentSuccess = (paymentIntent: any) => {
