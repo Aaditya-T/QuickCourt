@@ -13,6 +13,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import LocationMap from "@/components/ui/location-map";
 import { 
   Building, 
   MapPin, 
@@ -89,6 +90,8 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
     city: "",
     state: "",
     zipCode: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
 
   const [gameCourts, setGameCourts] = useState<GameCourt[]>([]);
@@ -124,6 +127,8 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
           city: facility.city || "",
           state: facility.state || "",
           zipCode: facility.zipCode || "",
+          latitude: facility.latitude ? parseFloat(facility.latitude) : null,
+          longitude: facility.longitude ? parseFloat(facility.longitude) : null,
         });
         setSelectedAmenities(facility.amenities || []);
         
@@ -152,6 +157,8 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
           city: "",
           state: "",
           zipCode: "",
+          latitude: null,
+          longitude: null,
         });
         setGameCourts([]);
         setSelectedAmenities([]);
@@ -170,6 +177,14 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLocationChange = (coordinates: { latitude: number; longitude: number }) => {
+    setFormData(prev => ({
+      ...prev,
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+    }));
   };
 
   const handleGameCourtChange = (gameId: string, field: 'courtCount' | 'pricePerHour', value: number) => {
@@ -288,8 +303,9 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
         </DialogHeader>
 
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="location">Location</TabsTrigger>
             <TabsTrigger value="games">Games & Courts</TabsTrigger>
             <TabsTrigger value="amenities">Amenities</TabsTrigger>
             <TabsTrigger value="hours">Hours</TabsTrigger>
@@ -368,6 +384,20 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="location" className="space-y-6">
+            <LocationMap
+              address={formData.address}
+              city={formData.city}
+              state={formData.state}
+              zipCode={formData.zipCode}
+              onLocationChange={handleLocationChange}
+              initialCoordinates={{
+                latitude: formData.latitude,
+                longitude: formData.longitude,
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="games" className="space-y-6">
