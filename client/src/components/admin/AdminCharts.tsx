@@ -340,15 +340,6 @@ export default function AdminCharts() {
             Toggle
           </Button>
         </div>
-        <CardContent className="p-6">
-          <h3 className="text-lg leading-6 font-semibold text-gray-900 mb-6 flex items-center">
-            <TrendingUp className="w-5 h-5 mr-3 text-amber-600" />
-            Monthly Earnings Simulation
-          </h3>
-          <div className="h-[350px]">
-            <Chart type={chartTypes.earnings} data={earningsData} options={chartOptions} />
-          </div>
-        </CardContent>
       </Card>
     </>
   );

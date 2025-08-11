@@ -1,65 +1,31 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import Navbar from "@/components/ui/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { format } from "date-fns";
+import { queryClient } from "@/lib/queryClient";
 import { 
   Users,
   Building,
   Calendar,
   TrendingUp,
-  MoreVertical,
-  Search,
   Shield,
   AlertTriangle,
   CheckCircle,
-  XCircle,
-  Eye,
-  Edit,
-  Ban,
   Zap,
   LayoutDashboard,
   Download,
   BarChart3,
-  UserCheck,
   Flag,
   User,
   LogOut,
-  Clock,
-  MapPin,
-  Phone,
   FileText,
-  MessageCircle,
-  Check,
-  X,
-  UserX,
   MessageSquare,
-  RefreshCw,
-  PieChart
 } from "lucide-react";
 import AdminCharts from "@/components/admin/AdminCharts";
 import FacilityApprovalTab from "@/components/admin/FacilityApprovalTab";
@@ -270,14 +236,6 @@ export default function AdminDashboard() {
               <span className="sm:hidden">Facilities</span>
             </TabsTrigger>
             <TabsTrigger 
-              value="owner-approval"
-              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
-            >
-              <UserCheck className="w-4 h-4 mb-1" />
-              <span className="hidden sm:inline">Owner Approval</span>
-              <span className="sm:hidden">Owners</span>
-            </TabsTrigger>
-            <TabsTrigger 
               value="user-management"
               className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
             >
@@ -293,22 +251,7 @@ export default function AdminDashboard() {
               <span className="hidden sm:inline">Reports & Moderation</span>
               <span className="sm:hidden">Reports</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="analytics"
-              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
-            >
-              <TrendingUp className="w-4 h-4 mb-1" />
-              <span className="hidden sm:inline">Analytics</span>
-              <span className="sm:hidden">Stats</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="profile"
-              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
-            >
-              <User className="w-4 h-4 mb-1" />
-              <span className="hidden sm:inline">Profile</span>
-              <span className="sm:hidden">Me</span>
-            </TabsTrigger>
+
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -453,6 +396,7 @@ export default function AdminDashboard() {
             <UserManagementTab 
               users={users} 
               isLoading={usersLoading} 
+              token={token}
               onUpdateUserRole={(userId, role) => updateUserRoleMutation.mutate({ userId, role })} 
             />
           </TabsContent>
@@ -519,64 +463,6 @@ export default function AdminDashboard() {
             </div>
           </TabsContent>
 
-          <TabsContent value="profile">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6">Admin Profile</h3>
-                    <form className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                          <Input type="text" defaultValue="John" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                          <Input type="text" defaultValue="Admin" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <Input type="email" defaultValue="admin@quickcourt.com" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                        <Input type="text" defaultValue="admin" />
-                      </div>
-                      <div className="pt-4">
-                        <Button type="submit">Update Profile</Button>
-                      </div>
-                    </form>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Admin Privileges</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">User Management</span>
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Facility Approval</span>
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">System Analytics</span>
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Report Moderation</span>
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
         </Tabs>
       </div>
     </div>

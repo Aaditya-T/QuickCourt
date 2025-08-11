@@ -1257,7 +1257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             'Uttar Pradesh': { lat: 26.8467, lng: 80.9462 }
           };
           
-          const coords = stateCoords[postOffice.State] || { lat: 20.5937, lng: 78.9629 };
+          const coords = (stateCoords as any)[postOffice.State] || { lat: 20.5937, lng: 78.9629 };
           
           return res.json({
             latitude: coords.lat,
@@ -1277,7 +1277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin-only routes
-  app.get("/api/admin/users", authenticateToken, requireRole(['admin']), async (req, res) => {
+  app.get("/api/admin/users", authenticateToken, requireRole(['admin']), async (req: any, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -1286,7 +1286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/bookings", authenticateToken, requireRole(['admin']), async (req, res) => {
+  app.get("/api/admin/bookings", authenticateToken, requireRole(['admin']), async (req: any, res) => {
     try {
       const bookings = await storage.getBookings();
       res.json(bookings);
@@ -1295,7 +1295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/users/:id/role", authenticateToken, requireRole(['admin']), async (req, res) => {
+  app.patch("/api/admin/users/:id/role", authenticateToken, requireRole(['admin']), async (req: any, res) => {
     try {
       const { role } = req.body;
       if (!['user', 'facility_owner', 'admin'].includes(role)) {
@@ -1313,7 +1313,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/facilities/:id/approve", authenticateToken, requireRole(['admin']), async (req, res) => {
+  // Update user details (name, phone, skill level, role)
+  app.patch("/api/admin/users/:id", authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const { firstName, lastName, phone, skillLevel, role } = req.body;
+      
+      // Validate role if provided
+      if (role && !['user', 'facility_owner', 'admin'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      // Validate skill level if provided
+      if (skillLevel && !['beginner', 'intermediate', 'advanced'].includes(skillLevel)) {
+        return res.status(400).json({ message: "Invalid skill level" });
+      }
+
+      const updates: any = {};
+      if (firstName !== undefined) updates.firstName = firstName;
+      if (lastName !== undefined) updates.lastName = lastName;
+      if (phone !== undefined) updates.phone = phone;
+      if (skillLevel !== undefined) updates.skillLevel = skillLevel;
+      if (role !== undefined) updates.role = role;
+
+      const updatedUser = await storage.updateUser(req.params.id, updates);
+      if (updatedUser) {
+        res.json({ message: "User updated successfully", user: updatedUser });
+      } else {
+        res.status(404).json({ message: "User not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Upload profile image for user
+  app.post("/api/admin/users/:id/profile-image", authenticateToken, requireRole(['admin']), upload.single('profileImage'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      const uploadedImage = await imageUploadService.uploadImage(req.file, 'profile-images');
+      
+      // Update user's profile image
+      const updatedUser = await storage.updateUser(req.params.id, { profileImage: uploadedImage.url });
+      if (updatedUser) {
+        res.json({ message: "Profile image updated successfully", imageUrl: uploadedImage.url });
+      } else {
+        res.status(404).json({ message: "User not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to upload profile image", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.patch("/api/admin/facilities/:id/approve", authenticateToken, requireRole(['admin']), async (req: any, res) => {
     try {
       const { isApproved, rejectionReason } = req.body;
       const success = await storage.updateFacilityApproval(req.params.id, isApproved, rejectionReason, req.user.userId);
