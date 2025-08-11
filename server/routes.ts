@@ -891,8 +891,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Image upload routes
-  app.post("/api/upload/image", upload.single('image'), async (req: any, res) => {
+  // Image upload routes - only for facility owners
+  app.post("/api/upload/image", authenticateToken, requireRole(['facility_owner', 'admin']), upload.single('image'), async (req: any, res) => {
     // Handle multer errors
     if (req.fileValidationError) {
       return res.status(400).json({ message: req.fileValidationError });
@@ -902,7 +902,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasFile: !!req.file,
         fileSize: req.file?.size,
         fileType: req.file?.mimetype,
-        fileName: req.file?.originalname
+        fileName: req.file?.originalname,
+        userId: req.user?.userId,
+        userRole: req.user?.role
       });
 
       if (!req.file) {

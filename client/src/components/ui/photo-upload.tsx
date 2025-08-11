@@ -44,6 +44,9 @@ export default function PhotoUpload({
 
         const response = await fetch('/api/upload/image', {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
           body: formData
         });
 
