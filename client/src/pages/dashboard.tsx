@@ -19,6 +19,7 @@ import {
   BookOpen,
   User
 } from "lucide-react";
+import BookingReceipt from "@/components/ui/booking-receipt";
 
 export default function Dashboard() {
   const { user, token } = useAuth();
@@ -353,7 +354,9 @@ function BookingCard({ booking, isPast }: BookingCardProps) {
           <MapPin className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h4 className="font-medium">Court Booking</h4>
+          <h4 className="font-medium">
+            {booking.facility?.name || "Court Booking"}
+          </h4>
           <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
             <span className="flex items-center">
               <Calendar className="w-4 h-4 mr-1" />
@@ -364,23 +367,31 @@ function BookingCard({ booking, isPast }: BookingCardProps) {
               {format(new Date(booking.startTime), "h:mm a")} - {format(new Date(booking.endTime), "h:mm a")}
             </span>
           </div>
+          {booking.game?.name && (
+            <p className="text-sm text-blue-600 mt-1 font-medium">
+              {booking.game.name} • {booking.game.sportType}
+            </p>
+          )}
           {booking.notes && (
             <p className="text-sm text-gray-500 mt-1">{booking.notes}</p>
           )}
         </div>
       </div>
       
-      <div className="text-right">
-        <Badge 
-          variant={
-            booking.status === "confirmed" ? "default" :
-            booking.status === "cancelled" ? "destructive" :
-            "secondary"
-          }
-        >
-          {booking.status}
-        </Badge>
-        <p className="text-sm font-medium mt-1">₹{booking.totalAmount}</p>
+      <div className="text-right space-y-2">
+        <div className="flex items-center gap-2">
+          <Badge 
+            variant={
+              booking.status === "confirmed" ? "default" :
+              booking.status === "cancelled" ? "destructive" :
+              "secondary"
+            }
+          >
+            {booking.status}
+          </Badge>
+          <BookingReceipt booking={booking} />
+        </div>
+        <p className="text-sm font-medium">₹{booking.totalAmount}</p>
       </div>
     </div>
   );
