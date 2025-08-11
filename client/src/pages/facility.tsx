@@ -738,7 +738,7 @@ export default function Facility() {
                               return (
                                 <div
                                   key={facilityCourt.id}
-                                  onClick={() => setSelectedSport(facilityCourt.game.sportType)}
+                                  onClick={() => setSelectedSport(facilityCourt.game?.sportType || '')}
                                   className={`cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 ${isSelected
                                     ? "border-blue-500 bg-blue-50 shadow-md"
                                     : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
