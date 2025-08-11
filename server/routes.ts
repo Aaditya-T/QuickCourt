@@ -5,6 +5,7 @@ import { AuthService } from "./authService";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
+import Stripe from "stripe";
 import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema } from "@shared/schema";
 import multer from "multer";
 import { imageUploadService } from "./imageUploadService";
@@ -676,15 +677,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment routes - Stripe integration
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-  console.log('Stripe Config:', { 
-    secret_key: process.env.STRIPE_SECRET_KEY ? 'SET' : 'MISSING',
-    publishable_key: process.env.STRIPE_PUBLISHABLE_KEY ? 'SET' : 'MISSING'
-  });
-
-  if (!process.env.STRIPE_SECRET_KEY) {
-    console.error("Stripe credentials not configured. Payment routes will not work properly.");
+  let stripe: Stripe | null = null;
+  
+  if (process.env.STRIPE_SECRET_KEY) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2023-10-16',
+    });
+    console.log('Stripe initialized successfully');
+  } else {
+    console.log('Stripe credentials not configured. Payment routes will be disabled.');
   }
 
   // Create payment intent
@@ -700,7 +701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      if (!process.env.STRIPE_SECRET_KEY) {
+      if (!stripe) {
         return res.status(500).json({
           success: false,
           message: "Payment gateway not configured properly"

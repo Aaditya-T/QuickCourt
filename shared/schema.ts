@@ -65,7 +65,22 @@ export const bookings = pgTable("bookings", {
   endTime: timestamp("end_time").notNull(),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: bookingStatusEnum("status").default("pending"),
+  paymentIntentId: text("payment_intent_id"), // Stripe payment intent ID
+  paymentStatus: text("payment_status").default("pending"), // pending, succeeded, failed, canceled
   notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bookingId: varchar("booking_id").references(() => bookings.id).notNull(),
+  stripePaymentIntentId: text("stripe_payment_intent_id").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("inr"),
+  status: text("status").notNull(), // pending, succeeded, failed, canceled
+  stripeClientSecret: text("stripe_client_secret"),
+  metadata: text("metadata"), // JSON string for additional data
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
