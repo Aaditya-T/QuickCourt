@@ -119,7 +119,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFacility(id: string): Promise<boolean> {
     const result = await db.update(facilities).set({ isActive: false, updatedAt: new Date() }).where(eq(facilities.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Booking operations
@@ -168,7 +168,7 @@ export class DatabaseStorage implements IStorage {
 
   async cancelBooking(id: string): Promise<boolean> {
     const result = await db.update(bookings).set({ status: "cancelled", updatedAt: new Date() }).where(eq(bookings.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Match operations
@@ -237,7 +237,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMatch(id: string): Promise<boolean> {
     const result = await db.update(matches).set({ status: "cancelled", updatedAt: new Date() }).where(eq(matches.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Match participant operations
@@ -256,7 +256,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(matchParticipants)
       .where(and(eq(matchParticipants.matchId, matchId), eq(matchParticipants.userId, userId)));
     
-    if (result.rowCount > 0) {
+    if ((result.rowCount || 0) > 0) {
       // Update current player count
       await db.update(matches)
         .set({ currentPlayers: sql`${matches.currentPlayers} - 1` })
