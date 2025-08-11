@@ -7,6 +7,8 @@ import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema } from "@shared/schema";
 
+import Stripe from "stripe";
+
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 // Rate limiter for OTP requests: 2 requests per minute per IP
@@ -535,6 +537,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(review);
     } catch (error) {
       res.status(400).json({ message: "Invalid review data", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+    // Payment routes - Stripe integration
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+  console.log('Stripe Config:', { 
+    secret_key: process.env.STRIPE_SECRET_KEY ? 'SET' : 'MISSING',
+    publishable_key: process.env.STRIPE_PUBLISHABLE_KEY ? 'SET' : 'MISSING'
+  });
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error("Stripe credentials not configured. Payment routes will not work properly.");
+  }
+
+  // Create payment intent
+  app.post("/api/create-payment-intent", async (req, res) => {
+    try {
+      console.log('Payment intent request body:', req.body);
+
+      // Validate required fields
+      if (!req.body.amount || !req.body.currency) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields: amount or currency"
+        });
+      }
+
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return res.status(500).json({
+          success: false,
+          message: "Payment gateway not configured properly"
+        });
+      }
+
+      const { amount, currency = 'inr', metadata = {} } = req.body;
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100), // Convert to smallest currency unit (paise for INR)
+        currency: currency,
+        metadata: {
+          transactionId: req.body.transactionId || `txn_${Date.now()}`,
+          customerName: req.body.name || 'Guest',
+          customerPhone: req.body.number || '',
+          ...metadata
+        },
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+
+      console.log('Payment intent created:', paymentIntent.id);
+
+      res.json({
+        success: true,
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id
+      });
+
+    } catch (error: any) {
+      console.error('Payment intent creation error:', error);
+      
+      res.status(500).json({
+        success: false,
+        message: error.message || "Payment intent creation failed",
+        error: error.message
+      });
+    }
+  });
+
+  // Confirm payment and handle success
+  app.post("/api/confirm-payment", async (req, res) => {
+    try {
+      const { paymentIntentId } = req.body;
+
+      if (!paymentIntentId) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment intent ID is required"
+        });
+      }
+
+      // Retrieve the payment intent to check its status
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      if (paymentIntent.status === 'succeeded') {
+        // Payment was successful
+        console.log('Payment confirmed:', paymentIntentId);
+        
+        res.json({
+          success: true,
+          status: paymentIntent.status,
+          amount: paymentIntent.amount,
+          currency: paymentIntent.currency,
+          metadata: paymentIntent.metadata
+        });
+      } else {
+        res.json({
+          success: false,
+          status: paymentIntent.status,
+          message: `Payment status: ${paymentIntent.status}`
+        });
+      }
+
+    } catch (error: any) {
+      console.error('Payment confirmation error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Payment confirmation failed"
+      });
+    }
+  });
+
+  // Get payment status
+  app.get("/api/payment-status/:paymentIntentId", async (req, res) => {
+    try {
+      const { paymentIntentId } = req.params;
+
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      res.json({
+        success: true,
+        status: paymentIntent.status,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        metadata: paymentIntent.metadata
+      });
+
+    } catch (error: any) {
+      console.error('Payment status error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to retrieve payment status"
+      });
     }
   });
 
