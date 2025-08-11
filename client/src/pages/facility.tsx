@@ -613,19 +613,19 @@ export default function Facility() {
           </div>
 
           {/* Main Booking Interface - Compact Layout */}
-          <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="max-w-7xl mx-auto px-3 py-3">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Book Your Court</h2>
               <p className="text-gray-600">Select your preferred sport, date, and time slots to make a reservation</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
 
               {/* Left Panel - Booking Controls */}
               <div className="lg:col-span-2">
                 <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
                   <CardContent className="p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
 
                       {/* Sports Selection */}
                       <div>
@@ -664,7 +664,7 @@ export default function Facility() {
 
                       {/* Date Selection */}
                       {!isOpen && (
-                        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-2">
                           <div className="flex items-center gap-2 text-red-800">
                             <Clock className="w-4 h-4" />
                             <span className="text-sm font-medium">
@@ -682,7 +682,7 @@ export default function Facility() {
                           <CalendarIcon className="w-4 h-4 text-green-600" />
                           Select Date
                         </Label>
-                        <div className="bg-white rounded-lg border-2 border-gray-200 p-3 flex justify-center">
+                        <div className="bg-white rounded-lg border-2 border-gray-200 flex justify-center">
                           <Calendar
                             mode="single"
                             selected={selectedDate}
@@ -707,11 +707,6 @@ export default function Facility() {
                             }}
                           />
                         </div>
-                        {selectedDate && (
-                          <div className="mt-2 text-center text-sm text-blue-600 font-medium">
-                            📅 {format(selectedDate, "EEEE, MMM dd, yyyy")}
-                          </div>
-                        )}
 
                         {/* Calendar Legend */}
                         <div className="mt-3 text-xs text-gray-600 space-y-1">
