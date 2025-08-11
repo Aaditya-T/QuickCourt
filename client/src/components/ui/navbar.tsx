@@ -136,6 +136,12 @@ export default function Navbar() {
                     </div>
                   </div>
                   <DropdownMenuItem asChild>
+                    <Link href="/profile">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>My Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href={getDashboardLink()}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
@@ -185,6 +191,12 @@ export default function Navbar() {
                             <p className="text-sm text-muted-foreground">{user.email}</p>
                           </div>
                         </div>
+                        <Link href="/profile">
+                          <Button variant="outline" className="w-full" onClick={() => setMobileMenuOpen(false)}>
+                            <User className="mr-2 h-4 w-4" />
+                            My Profile
+                          </Button>
+                        </Link>
                         <Button onClick={logout} variant="outline" className="w-full">
                           Log out
                         </Button>

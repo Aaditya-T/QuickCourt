@@ -26,6 +26,8 @@ type Facility = {
   city: string;
   state: string;
   zipCode: string;
+  latitude?: string;
+  longitude?: string;
   sportTypes: string[];
   pricePerHour: string; // decimal as string from backend
   images: string[];
@@ -174,9 +176,11 @@ export default function Facility() {
     }
   }, [facility, selectedSport]);
 
-  const { openLabel, closeLabel } = useMemo(() => {
+  const { openLabel, closeLabel, isOpen } = useMemo(() => {
     let openTime = "06:00";
     let closeTime = "23:00";
+    let isOpen = true;
+    
     if (facility?.operatingHours) {
       try {
         const hours = JSON.parse(facility.operatingHours);
@@ -185,17 +189,42 @@ export default function Facility() {
           .toLowerCase()
           .slice(0, 3);
         const todayHours = hours[today] || hours.monday;
+        
         if (todayHours) {
-          openTime = todayHours.open;
-          closeTime = todayHours.close;
+          if (todayHours.closed) {
+            isOpen = false;
+            openTime = "00:00";
+            closeTime = "00:00";
+          } else if (todayHours.open && todayHours.close) {
+            openTime = todayHours.open;
+            closeTime = todayHours.close;
+            isOpen = true;
+          }
         }
-      } catch {}
+      } catch (error) {
+        console.error("Error parsing operating hours:", error);
+        isOpen = false;
+      }
     }
-    return { openLabel: openTime, closeLabel: closeTime };
+    return { openLabel: openTime, closeLabel: closeTime, isOpen };
   }, [facility?.operatingHours, selectedDate]);
 
+  // Helper function to check if a specific date is closed
+  const isDateClosed = (date: Date) => {
+    if (!facility?.operatingHours) return false;
+    
+    try {
+      const hours = JSON.parse(facility.operatingHours);
+      const dayOfWeek = date.toLocaleDateString("en", { weekday: "long" }).toLowerCase().slice(0, 3);
+      const dayHours = hours[dayOfWeek] || hours.monday;
+      return dayHours?.closed || false;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const timeSlots: TimeSlot[] = useMemo(() => {
-    if (!facility || !selectedDate || !selectedSport) return [];
+    if (!facility || !selectedDate || !selectedSport || !isOpen) return [];
     const slots: TimeSlot[] = [];
     const pricePerHour = parseFloat(facility.pricePerHour); // This will be sport-specific in the future
 
@@ -234,7 +263,7 @@ export default function Facility() {
       current = addHours(current, 1);
     }
     return slots;
-  }, [facility, selectedDate, existingBookings, selectedSport, openLabel, closeLabel]);
+  }, [facility, selectedDate, existingBookings, selectedSport, openLabel, closeLabel, isOpen]);
 
   const toggleSlot = (slot: TimeSlot) => {
     setSelectedSlots((prev) => {
@@ -393,11 +422,17 @@ export default function Facility() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                      <Clock className="w-4 h-4 text-green-600" />
+                    <div className={`flex items-center gap-2 p-3 rounded-lg ${
+                      isOpen ? 'bg-green-50' : 'bg-red-50'
+                    }`}>
+                      <Clock className={`w-4 h-4 ${isOpen ? 'text-green-600' : 'text-red-600'}`} />
                       <div>
-                        <div className="font-medium text-gray-900">Open Today</div>
-                        <div className="text-gray-600">{openLabel} - {closeLabel}</div>
+                        <div className={`font-medium ${isOpen ? 'text-gray-900' : 'text-red-800'}`}>
+                          {isOpen ? 'Open Today' : 'Closed Today'}
+                        </div>
+                        <div className={`text-sm ${isOpen ? 'text-gray-600' : 'text-red-600'}`}>
+                          {isOpen ? `${openLabel} - ${closeLabel}` : 'Facility is not operating'}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -424,13 +459,134 @@ export default function Facility() {
             </div>
           </div>
 
-          {/* Facility Description */}
-          {facility.description && (
+          {/* Facility Description with Map */}
+          {facility.description ? (
             <div className="max-w-7xl mx-auto px-6 py-4">
               <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
                 <CardContent className="p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-3">About This Facility</h2>
-                  <p className="text-gray-700 leading-relaxed">{facility.description}</p>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Description Section */}
+                    <div className="lg:col-span-1">
+                      <h2 className="text-xl font-bold text-gray-900 mb-3">About This Facility</h2>
+                      <p className="text-gray-700 leading-relaxed">{facility.description}</p>
+                    </div>
+                    
+                    {/* Map Section - Bigger */}
+                    <div className="lg:col-span-1">
+                      <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-red-500" />
+                        Facility Location
+                      </h3>
+                      <div className="bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 shadow-inner">
+                        <iframe
+                          src={
+                            facility.latitude && facility.longitude
+                              ? `https://maps.google.com/maps?q=${facility.latitude},${facility.longitude}&t=&z=16&ie=UTF8&iwloc=&output=embed`
+                              : `https://maps.google.com/maps?q=${encodeURIComponent(`${facility.address}, ${facility.city}, ${facility.state}`)}&t=&z=15&ie=UTF8&iwloc=&output=embed`
+                          }
+                          width="100%"
+                          height="350"
+                          frameBorder="0"
+                          style={{ border: 0 }}
+                          allowFullScreen={false}
+                          loading="lazy"
+                          title="Facility Location"
+                          className="w-full h-80"
+                        />
+                      </div>
+                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-start gap-3">
+                          <MapPin className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold text-gray-900 mb-1">{facility.name}</div>
+                            <div className="text-sm font-medium text-gray-900">{facility.address}</div>
+                            <div className="text-sm text-gray-600 mb-3">{facility.city}, {facility.state} {facility.zipCode}</div>
+                            {facility.latitude && facility.longitude && (
+                              <div className="text-xs text-gray-500 mb-3">
+                                📍 {parseFloat(facility.latitude).toFixed(6)}, {parseFloat(facility.longitude).toFixed(6)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const query = facility.latitude && facility.longitude
+                              ? `${facility.latitude},${facility.longitude}`
+                              : `${facility.address}, ${facility.city}, ${facility.state}`;
+                            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+                            window.open(googleMapsUrl, '_blank');
+                          }}
+                          className="w-full text-sm bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md font-medium"
+                        >
+                          <MapPin className="w-4 h-4" />
+                          Get Directions on Google Maps
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            /* Map only section for facilities without description */
+            <div className="max-w-7xl mx-auto px-6 py-4">
+              <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-red-500" />
+                        Facility Location
+                      </h2>
+                      <div className="bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 shadow-inner">
+                        <iframe
+                          src={
+                            facility.latitude && facility.longitude
+                              ? `https://maps.google.com/maps?q=${facility.latitude},${facility.longitude}&t=&z=16&ie=UTF8&iwloc=&output=embed`
+                              : `https://maps.google.com/maps?q=${encodeURIComponent(`${facility.address}, ${facility.city}, ${facility.state}`)}&t=&z=15&ie=UTF8&iwloc=&output=embed`
+                          }
+                          width="100%"
+                          height="350"
+                          frameBorder="0"
+                          style={{ border: 0 }}
+                          allowFullScreen={false}
+                          loading="lazy"
+                          title="Facility Location"
+                          className="w-full h-80"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col justify-center">
+                      <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-start gap-3 mb-4">
+                          <MapPin className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
+                          <div className="flex-1">
+                            <div className="text-lg font-semibold text-gray-900 mb-2">{facility.name}</div>
+                            <div className="text-sm font-medium text-gray-900">{facility.address}</div>
+                            <div className="text-sm text-gray-600 mb-3">{facility.city}, {facility.state} {facility.zipCode}</div>
+                            {facility.latitude && facility.longitude && (
+                              <div className="text-xs text-gray-500 mb-3">
+                                📍 Coordinates: {parseFloat(facility.latitude).toFixed(6)}, {parseFloat(facility.longitude).toFixed(6)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const query = facility.latitude && facility.longitude
+                              ? `${facility.latitude},${facility.longitude}`
+                              : `${facility.address}, ${facility.city}, ${facility.state}`;
+                            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+                            window.open(googleMapsUrl, '_blank');
+                          }}
+                          className="w-full text-sm bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md font-medium"
+                        >
+                          <MapPin className="w-5 h-5" />
+                          Get Directions on Google Maps
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -448,7 +604,7 @@ export default function Facility() {
                       
                       {/* Sports Selection */}
                       <div>
-                        <Label className="text-sm font-bold text-gray-800 mb-3 block flex items-center gap-2">
+                        <Label className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <Trophy className="w-4 h-4 text-blue-600" />
                           Choose Sport
                         </Label>
@@ -483,8 +639,22 @@ export default function Facility() {
                       </div>
 
                       {/* Date Selection */}
+                      {!isOpen && (
+                        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-red-800">
+                            <Clock className="w-4 h-4" />
+                            <span className="text-sm font-medium">
+                              ⚠️ Facility is closed on the selected date
+                            </span>
+                          </div>
+                          <p className="text-sm text-red-600 mt-1">
+                            Please select a different date when the facility is open.
+                          </p>
+                        </div>
+                      )}
+                      
                       <div>
-                        <Label className="text-sm font-bold text-gray-800 mb-3 block flex items-center gap-2">
+                        <Label className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <CalendarIcon className="w-4 h-4 text-green-600" />
                           Select Date
                         </Label>
@@ -498,9 +668,19 @@ export default function Facility() {
                               today.setHours(0, 0, 0, 0);
                               const dateToCheck = new Date(date);
                               dateToCheck.setHours(0, 0, 0, 0);
-                              return dateToCheck < today || date > addHours(new Date(), 24 * 30);
+                              return dateToCheck < today || date > addHours(new Date(), 24 * 30) || isDateClosed(date);
                             }}
                             className="mx-auto"
+                            modifiers={{
+                              closed: (date) => isDateClosed(date)
+                            }}
+                            modifiersStyles={{
+                              closed: { 
+                                backgroundColor: '#fef2f2', 
+                                color: '#dc2626',
+                                textDecoration: 'line-through'
+                              }
+                            }}
                           />
                         </div>
                         {selectedDate && (
@@ -508,11 +688,29 @@ export default function Facility() {
                             📅 {format(selectedDate, "EEEE, MMM dd, yyyy")}
                           </div>
                         )}
+                        
+                        {/* Calendar Legend */}
+                        <div className="mt-3 text-xs text-gray-600 space-y-1">
+                          <div className="flex items-center justify-center gap-4">
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
+                              <span>Available</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-red-100 border border-red-300 rounded text-red-600 line-through">15</div>
+                              <span>Closed</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                              <span>Past</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Time Slots */}
                       <div>
-                        <Label className="text-sm font-bold text-gray-800 mb-3 block flex items-center gap-2">
+                        <Label className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <Clock className="w-4 h-4 text-purple-600" />
                           Available Slots
                         </Label>
@@ -530,7 +728,9 @@ export default function Facility() {
                         ) : timeSlots.length === 0 ? (
                           <div className="text-center py-8 text-gray-500">
                             <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                            <p className="text-sm">No slots available</p>
+                            <p className="text-sm">
+                              {!isOpen ? "Facility is closed on this date" : "No slots available"}
+                            </p>
                           </div>
                         ) : (
                           <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -743,7 +943,7 @@ export default function Facility() {
                     
                     <Button 
                       className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg" 
-                      disabled={selectedSlots.length === 0 || isProcessing} 
+                      disabled={selectedSlots.length === 0 || isProcessing || !isOpen} 
                       onClick={proceedToCheckout}
                     >
                       {isProcessing ? (
@@ -751,6 +951,8 @@ export default function Facility() {
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                           Processing...
                         </div>
+                      ) : !isOpen ? (
+                        "Facility Closed"
                       ) : selectedSlots.length === 0 ? (
                         "Select Time Slots"
                       ) : (
@@ -758,7 +960,13 @@ export default function Facility() {
                       )}
                     </Button>
                     
-                    {selectedSlots.length === 0 && (
+                    {!isOpen && (
+                      <p className="text-xs text-red-500 text-center">
+                        Cannot book - facility is closed on this date
+                      </p>
+                    )}
+                    
+                    {selectedSlots.length === 0 && isOpen && (
                       <p className="text-xs text-gray-500 text-center">
                         Select time slots to proceed
                       </p>

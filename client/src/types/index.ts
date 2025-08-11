@@ -9,14 +9,17 @@ export interface AuthUser {
   profileImage?: string;
   skillLevel?: "beginner" | "intermediate" | "advanced";
   createdAt: string;
+  isEmailVerified?: boolean;
 }
 
 export interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
+  setUser: (user: AuthUser | null) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isLoading: boolean;
 }
 

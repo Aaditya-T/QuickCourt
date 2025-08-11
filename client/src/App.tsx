@@ -15,6 +15,7 @@ import Matches from "@/pages/matches";
 import Dashboard from "@/pages/dashboard";
 import FacilityOwnerDashboard from "@/pages/facility-owner-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
+import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import StripePayment from "@/pages/stripe-payment";
 import PaymentSuccess from "@/pages/payment-success";
@@ -54,6 +55,11 @@ function Router() {
       <Route path="/admin">
         <RouteGuard allowedRoles={["admin"]}>
           <AdminDashboard />
+        </RouteGuard>
+      </Route>
+      <Route path="/profile">
+        <RouteGuard allowedRoles={["user", "facility_owner", "admin"]}>
+          <Profile />
         </RouteGuard>
       </Route>
       <Route path="/payment">

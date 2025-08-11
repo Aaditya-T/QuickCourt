@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { useFormValidation } from "@/hooks/use-form-validation";
 import { facilityFormSchema, type FacilityFormData } from "@shared/validation";
 import {
+  BasicInformation,
+  MapLocation,
   OperatingHours,
   Amenities,
   Images,
@@ -24,7 +26,6 @@ interface CreateFacilityModalProps {
 export default function CreateFacilityModal({ open, onClose, onFacilityCreated }: CreateFacilityModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-
   // Facility form with validation
   const facilityForm = useFormValidation<FacilityFormData>({
     schema: facilityFormSchema,
@@ -77,7 +78,6 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
       });
     },
   });
-
   const handleSportTypeToggle = (sportType: string) => {
     const currentSportTypes = facilityForm.getValues("sportTypes");
     const newSportTypes = currentSportTypes.includes(sportType)
