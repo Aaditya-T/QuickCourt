@@ -286,14 +286,13 @@ function EnhancedFacilityCard({ facility, onBook }: { facility: any; onBook: () 
   };
 
   return (
-    <Card className="group overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-white/90 backdrop-blur-sm hover:scale-[1.02] h-full flex flex-col">
+    <Card className="group overflow-hidden border-0 transition-all duration-300 bg-white/90 hover:scale-[1.02] h-full flex flex-col">
       <div className="relative">
         <img
           src={image}
           alt={facility.name}
           className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
         {/* Rating Badge */}
         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">

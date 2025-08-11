@@ -16,7 +16,8 @@ import {
   Users, 
   TrendingUp,
   Activity,
-  BookOpen
+  BookOpen,
+  User
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -97,6 +98,12 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex space-x-3">
+              <Link href="/profile">
+                <Button variant="outline">
+                  <User className="w-4 h-4 mr-2" />
+                  My Profile
+                </Button>
+              </Link>
               <Link href="/facilities">
                 <Button variant="outline">
                   <BookOpen className="w-4 h-4 mr-2" />

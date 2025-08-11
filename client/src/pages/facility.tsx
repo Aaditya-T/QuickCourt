@@ -176,9 +176,11 @@ export default function Facility() {
     }
   }, [facility, selectedSport]);
 
-  const { openLabel, closeLabel } = useMemo(() => {
+  const { openLabel, closeLabel, isOpen } = useMemo(() => {
     let openTime = "06:00";
     let closeTime = "23:00";
+    let isOpen = true;
+    
     if (facility?.operatingHours) {
       try {
         const hours = JSON.parse(facility.operatingHours);
@@ -187,17 +189,42 @@ export default function Facility() {
           .toLowerCase()
           .slice(0, 3);
         const todayHours = hours[today] || hours.monday;
+        
         if (todayHours) {
-          openTime = todayHours.open;
-          closeTime = todayHours.close;
+          if (todayHours.closed) {
+            isOpen = false;
+            openTime = "00:00";
+            closeTime = "00:00";
+          } else if (todayHours.open && todayHours.close) {
+            openTime = todayHours.open;
+            closeTime = todayHours.close;
+            isOpen = true;
+          }
         }
-      } catch {}
+      } catch (error) {
+        console.error("Error parsing operating hours:", error);
+        isOpen = false;
+      }
     }
-    return { openLabel: openTime, closeLabel: closeTime };
+    return { openLabel: openTime, closeLabel: closeTime, isOpen };
   }, [facility?.operatingHours, selectedDate]);
 
+  // Helper function to check if a specific date is closed
+  const isDateClosed = (date: Date) => {
+    if (!facility?.operatingHours) return false;
+    
+    try {
+      const hours = JSON.parse(facility.operatingHours);
+      const dayOfWeek = date.toLocaleDateString("en", { weekday: "long" }).toLowerCase().slice(0, 3);
+      const dayHours = hours[dayOfWeek] || hours.monday;
+      return dayHours?.closed || false;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const timeSlots: TimeSlot[] = useMemo(() => {
-    if (!facility || !selectedDate || !selectedSport) return [];
+    if (!facility || !selectedDate || !selectedSport || !isOpen) return [];
     const slots: TimeSlot[] = [];
     const pricePerHour = parseFloat(facility.pricePerHour); // This will be sport-specific in the future
 
@@ -236,7 +263,7 @@ export default function Facility() {
       current = addHours(current, 1);
     }
     return slots;
-  }, [facility, selectedDate, existingBookings, selectedSport, openLabel, closeLabel]);
+  }, [facility, selectedDate, existingBookings, selectedSport, openLabel, closeLabel, isOpen]);
 
   const toggleSlot = (slot: TimeSlot) => {
     setSelectedSlots((prev) => {
@@ -395,11 +422,17 @@ export default function Facility() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                      <Clock className="w-4 h-4 text-green-600" />
+                    <div className={`flex items-center gap-2 p-3 rounded-lg ${
+                      isOpen ? 'bg-green-50' : 'bg-red-50'
+                    }`}>
+                      <Clock className={`w-4 h-4 ${isOpen ? 'text-green-600' : 'text-red-600'}`} />
                       <div>
-                        <div className="font-medium text-gray-900">Open Today</div>
-                        <div className="text-gray-600">{openLabel} - {closeLabel}</div>
+                        <div className={`font-medium ${isOpen ? 'text-gray-900' : 'text-red-800'}`}>
+                          {isOpen ? 'Open Today' : 'Closed Today'}
+                        </div>
+                        <div className={`text-sm ${isOpen ? 'text-gray-600' : 'text-red-600'}`}>
+                          {isOpen ? `${openLabel} - ${closeLabel}` : 'Facility is not operating'}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -606,6 +639,20 @@ export default function Facility() {
                       </div>
 
                       {/* Date Selection */}
+                      {!isOpen && (
+                        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-red-800">
+                            <Clock className="w-4 h-4" />
+                            <span className="text-sm font-medium">
+                              ⚠️ Facility is closed on the selected date
+                            </span>
+                          </div>
+                          <p className="text-sm text-red-600 mt-1">
+                            Please select a different date when the facility is open.
+                          </p>
+                        </div>
+                      )}
+                      
                       <div>
                         <Label className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <CalendarIcon className="w-4 h-4 text-green-600" />
@@ -621,9 +668,19 @@ export default function Facility() {
                               today.setHours(0, 0, 0, 0);
                               const dateToCheck = new Date(date);
                               dateToCheck.setHours(0, 0, 0, 0);
-                              return dateToCheck < today || date > addHours(new Date(), 24 * 30);
+                              return dateToCheck < today || date > addHours(new Date(), 24 * 30) || isDateClosed(date);
                             }}
                             className="mx-auto"
+                            modifiers={{
+                              closed: (date) => isDateClosed(date)
+                            }}
+                            modifiersStyles={{
+                              closed: { 
+                                backgroundColor: '#fef2f2', 
+                                color: '#dc2626',
+                                textDecoration: 'line-through'
+                              }
+                            }}
                           />
                         </div>
                         {selectedDate && (
@@ -631,6 +688,24 @@ export default function Facility() {
                             📅 {format(selectedDate, "EEEE, MMM dd, yyyy")}
                           </div>
                         )}
+                        
+                        {/* Calendar Legend */}
+                        <div className="mt-3 text-xs text-gray-600 space-y-1">
+                          <div className="flex items-center justify-center gap-4">
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
+                              <span>Available</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-red-100 border border-red-300 rounded text-red-600 line-through">15</div>
+                              <span>Closed</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                              <span>Past</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Time Slots */}
@@ -653,7 +728,9 @@ export default function Facility() {
                         ) : timeSlots.length === 0 ? (
                           <div className="text-center py-8 text-gray-500">
                             <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                            <p className="text-sm">No slots available</p>
+                            <p className="text-sm">
+                              {!isOpen ? "Facility is closed on this date" : "No slots available"}
+                            </p>
                           </div>
                         ) : (
                           <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -866,7 +943,7 @@ export default function Facility() {
                     
                     <Button 
                       className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg" 
-                      disabled={selectedSlots.length === 0 || isProcessing} 
+                      disabled={selectedSlots.length === 0 || isProcessing || !isOpen} 
                       onClick={proceedToCheckout}
                     >
                       {isProcessing ? (
@@ -874,6 +951,8 @@ export default function Facility() {
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                           Processing...
                         </div>
+                      ) : !isOpen ? (
+                        "Facility Closed"
                       ) : selectedSlots.length === 0 ? (
                         "Select Time Slots"
                       ) : (
@@ -881,7 +960,13 @@ export default function Facility() {
                       )}
                     </Button>
                     
-                    {selectedSlots.length === 0 && (
+                    {!isOpen && (
+                      <p className="text-xs text-red-500 text-center">
+                        Cannot book - facility is closed on this date
+                      </p>
+                    )}
+                    
+                    {selectedSlots.length === 0 && isOpen && (
                       <p className="text-xs text-gray-500 text-center">
                         Select time slots to proceed
                       </p>

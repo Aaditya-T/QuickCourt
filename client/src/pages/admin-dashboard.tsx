@@ -229,6 +229,12 @@ export default function AdminDashboard() {
               <p className="text-gray-600 mt-2">Manage facilities, users, and platform analytics</p>
             </div>
             <div className="flex items-center space-x-3">
+              <Link href="/profile">
+                <Button variant="outline">
+                  <User className="w-4 h-4 mr-2" />
+                  My Profile
+                </Button>
+              </Link>
               <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
                 <Download className="w-4 h-4 mr-2" />
                 Export Data

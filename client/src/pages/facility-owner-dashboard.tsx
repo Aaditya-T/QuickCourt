@@ -25,7 +25,8 @@ import {
   Star,
   Clock,
   Power,
-  PowerOff
+  PowerOff,
+  User
 } from "lucide-react";
 
 export default function FacilityOwnerDashboard() {
@@ -153,20 +154,28 @@ export default function FacilityOwnerDashboard() {
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                Facility Owner Dashboard
-              </h1>
-              <p className="text-gray-600 mt-2 text-sm sm:text-base">
-                Manage your facilities and track your business performance
-              </p>
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                  Facility Owner Dashboard
+                </h1>
+                <p className="text-gray-600 mt-2 text-sm sm:text-base">
+                  Manage your facilities and track your business performance
+                </p>
+              </div>
+              <div className="flex space-x-3">
+                <Link href="/profile">
+                  <Button variant="outline">
+                    <User className="w-4 h-4 mr-2" />
+                    My Profile
+                  </Button>
+                </Link>
+                {/* <Button onClick={() => setCreateFacilityModalOpen(true)} className="w-full sm:w-auto">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Facility
+                  </Button> */}
+              </div>
             </div>
-            {/* <Button onClick={() => setCreateFacilityModalOpen(true)} className="w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Facility
-            </Button> */}
-          </div>
         </div>
       </div>
 

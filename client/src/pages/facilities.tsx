@@ -297,7 +297,6 @@ function EnhancedFacilityCard({ facility, onBook }: { facility: any; onBook: () 
           alt={facility.name}
           className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
         {/* Rating Badge */}
         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
