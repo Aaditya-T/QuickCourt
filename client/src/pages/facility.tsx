@@ -514,6 +514,26 @@ export default function Facility() {
                       </div>
                     </div>
 
+                    {/* Available Amenities */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Available Amenities</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {facility.amenities && facility.amenities.length > 0 ? (
+                          facility.amenities.map((amenity: string) => (
+                            <Badge
+                              key={amenity}
+                              variant="outline"
+                              className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 text-xs px-3 py-1"
+                            >
+                              {amenity}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-gray-500 text-sm italic">No amenities listed</span>
+                        )}
+                      </div>
+                    </div>
+
                     {/* Pricing */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-200">
@@ -545,30 +565,7 @@ export default function Facility() {
                   </Card>
                 )}
 
-                {/* Amenities */}
-                {facility.amenities?.length > 0 && (
-                  <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-yellow-600" />
-                        Amenities
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {facility.amenities.map((amenity) => {
-                          const IconComponent = amenityIcons[amenity] || Zap;
-                          return (
-                            <div key={amenity} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                              <IconComponent className="w-4 h-4 text-gray-600" />
-                              <span className="text-sm text-gray-700">{amenity}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+
               </div>
 
               {/* Right Column - Map & Quick Actions */}

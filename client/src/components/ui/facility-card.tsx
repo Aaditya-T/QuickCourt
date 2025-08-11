@@ -64,23 +64,29 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
             </div>
           </div>
 
-          {/* Sports Available */}
+          {/* Available Amenities */}
           <div>
-            <div className="text-sm font-semibold text-gray-700 mb-2">Sports Available</div>
+            <div className="text-sm font-semibold text-gray-700 mb-2">Available Amenities</div>
             <div className="flex flex-wrap gap-2">
-              {facility.sportTypes?.slice(0, 4).map((sport: string) => (
-                <Badge
-                  key={sport}
-                  variant="secondary"
-                  className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-0"
-                >
-                  {sportIcons[sport]} {sportTypeLabels[sport] || sport}
-                </Badge>
-              ))}
-              {facility.sportTypes?.length > 4 && (
-                <Badge variant="outline" className="text-gray-600">
-                  +{facility.sportTypes.length - 4} more
-                </Badge>
+              {facility.amenities && facility.amenities.length > 0 ? (
+                <>
+                  {facility.amenities.slice(0, 4).map((amenity: string) => (
+                    <Badge
+                      key={amenity}
+                      variant="outline"
+                      className="bg-green-50 text-green-700 border-green-200 text-xs"
+                    >
+                      {amenity}
+                    </Badge>
+                  ))}
+                  {facility.amenities.length > 4 && (
+                    <Badge variant="outline" className="text-gray-600 text-xs">
+                      +{facility.amenities.length - 4} more
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <span className="text-gray-500 text-xs italic">No amenities listed</span>
               )}
             </div>
           </div>
