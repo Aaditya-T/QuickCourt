@@ -1,9 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MapPin, Search, Navigation } from 'lucide-react';
+// Note: leaflet CSS is loaded globally via index.css
+
+// Fix for default markers in Leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
 
 interface LocationMapProps {
   address: string;
@@ -12,6 +23,16 @@ interface LocationMapProps {
   zipCode: string;
   onLocationChange: (coordinates: { latitude: number; longitude: number }) => void;
   initialCoordinates?: { latitude?: string | number | null; longitude?: string | number | null };
+}
+
+// Map event handler component
+function MapClickHandler({ onLocationChange }: { onLocationChange: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (e) => {
+      onLocationChange(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
 }
 
 export default function LocationMap({ 
@@ -24,8 +45,9 @@ export default function LocationMap({
 }: LocationMapProps) {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
-  const [manualLat, setManualLat] = useState<string>('');
-  const [manualLng, setManualLng] = useState<string>('');
+  const [mapCenter, setMapCenter] = useState<[number, number]>([19.0760, 72.8777]); // Default to Mumbai
+  const [mapZoom, setMapZoom] = useState(13);
+  const mapRef = useRef<L.Map | null>(null);
 
   // Initialize coordinates from props
   useEffect(() => {
@@ -33,8 +55,8 @@ export default function LocationMap({
       const lat = parseFloat(String(initialCoordinates.latitude));
       const lng = parseFloat(String(initialCoordinates.longitude));
       setCoordinates({ lat, lng });
-      setManualLat(lat.toString());
-      setManualLng(lng.toString());
+      setMapCenter([lat, lng]);
+      setMapZoom(15);
     }
   }, [initialCoordinates]);
 
@@ -58,9 +80,14 @@ export default function LocationMap({
         const longitude = parseFloat(lon);
         
         setCoordinates({ lat: latitude, lng: longitude });
-        setManualLat(latitude.toString());
-        setManualLng(longitude.toString());
+        setMapCenter([latitude, longitude]);
+        setMapZoom(15);
         onLocationChange({ latitude, longitude });
+        
+        // Update map view if it exists
+        if (mapRef.current) {
+          mapRef.current.setView([latitude, longitude], 15);
+        }
       } else {
         console.warn('No geocoding results found');
       }
@@ -71,14 +98,9 @@ export default function LocationMap({
     }
   };
 
-  const handleManualCoordinates = () => {
-    const lat = parseFloat(manualLat);
-    const lng = parseFloat(manualLng);
-    
-    if (!isNaN(lat) && !isNaN(lng)) {
-      setCoordinates({ lat, lng });
-      onLocationChange({ latitude: lat, longitude: lng });
-    }
+  const handleMapClick = (lat: number, lng: number) => {
+    setCoordinates({ lat, lng });
+    onLocationChange({ latitude: lat, longitude: lng });
   };
 
   const getCurrentLocation = () => {
@@ -87,9 +109,14 @@ export default function LocationMap({
         (position) => {
           const { latitude, longitude } = position.coords;
           setCoordinates({ lat: latitude, lng: longitude });
-          setManualLat(latitude.toString());
-          setManualLng(longitude.toString());
+          setMapCenter([latitude, longitude]);
+          setMapZoom(15);
           onLocationChange({ latitude, longitude });
+          
+          // Update map view if it exists
+          if (mapRef.current) {
+            mapRef.current.setView([latitude, longitude], 15);
+          }
         },
         (error) => {
           console.error('Error getting location:', error);
@@ -114,17 +141,16 @@ export default function LocationMap({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="w-5 h-5 text-red-600" />
-          Location & Coordinates
+          Location & Map
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="text-sm text-gray-600">
-          Set your facility's exact location coordinates. You can use geocoding to find coordinates automatically or enter them manually.
+          Enter your address details and click on the map to set your facility's exact location. The map will automatically center based on your zip code/city.
         </div>
         
         {/* Geocoding Section */}
         <div className="space-y-3">
-          <h4 className="font-medium text-gray-800">Find Coordinates Automatically</h4>
           <div className="flex gap-2">
             <Button 
               onClick={geocodeAddress} 
@@ -138,7 +164,7 @@ export default function LocationMap({
               ) : (
                 <Search className="w-4 h-4" />
               )}
-              {isGeocoding ? 'Finding...' : 'Find Coordinates'}
+              {isGeocoding ? 'Locating...' : 'Find on Map'}
             </Button>
             
             <Button 
@@ -153,43 +179,32 @@ export default function LocationMap({
           </div>
         </div>
 
-        {/* Manual Coordinate Input */}
+        {/* Interactive Map */}
         <div className="space-y-3">
-          <h4 className="font-medium text-gray-800">Or Enter Coordinates Manually</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="latitude">Latitude</Label>
-              <Input
-                id="latitude"
-                type="number"
-                step="any"
-                value={manualLat}
-                onChange={(e) => setManualLat(e.target.value)}
-                placeholder="e.g., 19.0760"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="longitude">Longitude</Label>
-              <Input
-                id="longitude"
-                type="number"
-                step="any"
-                value={manualLng}
-                onChange={(e) => setManualLng(e.target.value)}
-                placeholder="e.g., 72.8777"
-                className="mt-1"
-              />
-            </div>
-          </div>
-          <Button 
-            onClick={handleManualCoordinates}
-            size="sm"
-            variant="outline"
-            disabled={!manualLat || !manualLng}
+          <div 
+            className="w-full h-80 border border-gray-300 rounded-lg overflow-hidden"
+            style={{ minHeight: '320px' }}
           >
-            Set Coordinates
-          </Button>
+            <MapContainer
+              center={mapCenter}
+              zoom={mapZoom}
+              style={{ height: '100%', width: '100%' }}
+              ref={mapRef}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <MapClickHandler onLocationChange={handleMapClick} />
+              {coordinates && (
+                <Marker position={[coordinates.lat, coordinates.lng]} />
+              )}
+            </MapContainer>
+          </div>
+          
+          <div className="text-xs text-gray-500">
+            <strong>Tip:</strong> Click anywhere on the map to place your facility marker at that exact location.
+          </div>
         </div>
 
         {/* Current Coordinates Display */}
@@ -197,7 +212,7 @@ export default function LocationMap({
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <MapPin className="w-4 h-4 text-green-600" />
-              <span className="font-medium text-green-800">Current Coordinates</span>
+              <span className="font-medium text-green-800">Selected Location</span>
             </div>
             <div className="text-sm text-green-700">
               <div>Latitude: {coordinates.lat.toFixed(6)}</div>
@@ -217,10 +232,6 @@ export default function LocationMap({
             </div>
           </div>
         )}
-        
-        <div className="text-xs text-gray-500">
-          <strong>Tip:</strong> Accurate coordinates help customers find your facility easily. You can view and verify the location using the Google Maps link above.
-        </div>
       </CardContent>
     </Card>
   );
