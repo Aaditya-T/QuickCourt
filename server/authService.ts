@@ -8,7 +8,7 @@ export class AuthService {
   private static readonly JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key";
   private static readonly OTP_EXPIRY_MINUTES = 10;
 
-  static async sendSignupOTP(email: string, userData: Omit<InsertUser, 'id'>) {
+  static async sendSignupOTP(email: string) {
     // Check if user already exists
     const existingUser = await storage.getUserByEmail(email);
     if (existingUser) {

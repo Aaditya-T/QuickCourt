@@ -4,9 +4,33 @@ import { storage } from "./storage";
 import { AuthService } from "./authService";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
 import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+
+// Rate limiter for OTP requests: 2 requests per minute per IP
+const otpRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 2, // limit each IP to 2 requests per windowMs
+  message: {
+    message: "Too many OTP requests, please try again later. Limit: 2 requests per minute."
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  // Key generator to identify users (by IP address)
+  keyGenerator: (req) => {
+    // Use IP address as the key for rate limiting
+    return req.ip || req.connection.remoteAddress || 'unknown';
+  },
+  // Handler for when rate limit is exceeded
+  handler: (req, res) => {
+    res.status(429).json({
+      message: "Too many OTP requests, please try again later. Limit: 2 requests per minute.",
+      retryAfter: Math.ceil(60 / 1000) // Retry after 1 minute
+    });
+  }
+});
 
 // Middleware to verify JWT token
 const authenticateToken = (req: any, res: any, next: any) => {
@@ -38,10 +62,10 @@ const requireRole = (roles: string[]) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // OTP Auth routes
-  app.post("/api/auth/signup/send-otp", async (req, res) => {
+  app.post("/api/auth/signup/send-otp", otpRateLimiter, async (req, res) => {
     try {
-      const { email, ...userData } = req.body;
-      const result = await AuthService.sendSignupOTP(email, userData);
+      const { email } = req.body;
+      const result = await AuthService.sendSignupOTP(email);
       
       if (!result.success) {
         return res.status(400).json({ message: result.message });
@@ -54,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/signup/verify-otp", async (req, res) => {
+  app.post("/api/auth/signup/verify-otp", otpRateLimiter, async (req, res) => {
     try {
       const { email, code, ...userData } = req.body;
       const result = await AuthService.verifySignupOTP(email, code, userData);
@@ -74,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/login/send-otp", async (req, res) => {
+  app.post("/api/auth/login/send-otp", otpRateLimiter, async (req, res) => {
     try {
       const { email } = req.body;
       const result = await AuthService.sendLoginOTP(email);
@@ -90,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/login/verify-otp", async (req, res) => {
+  app.post("/api/auth/login/verify-otp", otpRateLimiter, async (req, res) => {
     try {
       const { email, code } = req.body;
       const result = await AuthService.verifyLoginOTP(email, code);
@@ -170,83 +194,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Login failed", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  // OTP-based authentication routes
-  app.post("/api/auth/signup/send-otp", async (req, res) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-      const result = await AuthService.sendSignupOTP(userData.email, userData);
-      
-      if (result.success) {
-        res.status(200).json({ message: result.message });
-      } else {
-        res.status(400).json({ message: result.message });
-      }
-    } catch (error) {
-      res.status(400).json({ message: "Invalid user data", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  app.post("/api/auth/signup/verify-otp", async (req, res) => {
-    try {
-      const { email, code, ...userData } = req.body;
-      const result = await AuthService.verifySignupOTP(email, code, userData);
-      
-      if (result.success) {
-        res.status(201).json({
-          message: result.message,
-          user: result.user,
-          token: result.token,
-        });
-      } else {
-        res.status(400).json({ message: result.message });
-      }
-    } catch (error) {
-      res.status(400).json({ message: "Verification failed", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  app.post("/api/auth/login/send-otp", async (req, res) => {
-    try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-
-      const result = await AuthService.sendLoginOTP(email);
-      
-      if (result.success) {
-        res.status(200).json({ message: result.message });
-      } else {
-        res.status(400).json({ message: result.message });
-      }
-    } catch (error) {
-      res.status(500).json({ message: "Failed to send login code", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  app.post("/api/auth/login/verify-otp", async (req, res) => {
-    try {
-      const { email, code } = req.body;
-      if (!email || !code) {
-        return res.status(400).json({ message: "Email and code are required" });
-      }
-
-      const result = await AuthService.verifyLoginOTP(email, code);
-      
-      if (result.success) {
-        res.status(200).json({
-          message: result.message,
-          user: result.user,
-          token: result.token,
-        });
-      } else {
-        res.status(400).json({ message: result.message });
-      }
-    } catch (error) {
-      res.status(500).json({ message: "Verification failed", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
@@ -342,69 +289,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/facilities/:id", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
-    try {
-      const facility = await storage.getFacility(req.params.id);
-      if (!facility) {
-        return res.status(404).json({ message: "Facility not found" });
-      }
-
-      // Check ownership (unless admin)
-      if (req.user.role !== "admin" && facility.ownerId !== req.user.userId) {
-        return res.status(403).json({ message: "Not authorized to delete this facility" });
-      }
-
-      const success = await storage.deleteFacility(req.params.id);
-      if (success) {
-        res.json({ message: "Facility deleted successfully" });
-      } else {
-        res.status(500).json({ message: "Failed to delete facility" });
-      }
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete facility", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  // Facility owner specific routes
-  app.get("/api/owner/facilities", authenticateToken, requireRole(["facility_owner"]), async (req: any, res) => {
-    try {
-      const facilities = await storage.getFacilities({});
-      const ownerFacilities = facilities.filter(facility => facility.ownerId === req.user.userId);
-      res.json(ownerFacilities);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to get facilities", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  app.get("/api/owner/bookings", authenticateToken, requireRole(["facility_owner"]), async (req: any, res) => {
-    try {
-      // Get all facilities owned by this user
-      const facilities = await storage.getFacilities({});
-      const ownerFacilities = facilities.filter(facility => facility.ownerId === req.user.userId);
-      
-      // Get bookings for all owned facilities
-      const allBookings = [];
-      for (const facility of ownerFacilities) {
-        const bookings = await storage.getBookingsByFacility(facility.id);
-        allBookings.push(...bookings);
-      }
-      
-      res.json(allBookings);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to get bookings", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
   app.get("/api/facilities/:id/bookings", authenticateToken, async (req: any, res) => {
     try {
-      // If facility owner, check ownership
-      if (req.user.role === "facility_owner") {
-        const facility = await storage.getFacility(req.params.id);
-        if (!facility || facility.ownerId !== req.user.userId) {
-          return res.status(403).json({ message: "Not authorized to view bookings for this facility" });
-        }
-      }
-      
       const date = req.query.date ? new Date(req.query.date as string) : undefined;
       const bookings = await storage.getBookingsByFacility(req.params.id, date);
       res.json(bookings);
@@ -413,8 +299,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Booking routes - restricted to users and admins only
-  app.get("/api/bookings", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
+  // Booking routes
+  app.get("/api/bookings", authenticateToken, async (req: any, res) => {
     try {
       const bookings = await storage.getBookings(req.user.userId);
       res.json(bookings);
@@ -423,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/bookings", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
+  app.post("/api/bookings", authenticateToken, async (req: any, res) => {
     try {
       const bookingData = insertBookingSchema.parse({
         ...req.body,
@@ -437,7 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/bookings/:id/cancel", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
+  app.put("/api/bookings/:id/cancel", authenticateToken, async (req: any, res) => {
     try {
       const booking = await storage.getBooking(req.params.id);
       if (!booking) {
@@ -487,7 +373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/matches", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
+  app.post("/api/matches", authenticateToken, async (req: any, res) => {
     try {
       const matchData = insertMatchSchema.parse({
         ...req.body,
@@ -501,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/matches/:id/join", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
+  app.post("/api/matches/:id/join", authenticateToken, async (req: any, res) => {
     try {
       const match = await storage.getMatch(req.params.id);
       if (!match) {
@@ -519,7 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/matches/:id/leave", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
+  app.delete("/api/matches/:id/leave", authenticateToken, async (req: any, res) => {
     try {
       const success = await storage.leaveMatch(req.params.id, req.user.userId);
       if (success) {
@@ -542,7 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/facilities/:id/reviews", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
+  app.post("/api/facilities/:id/reviews", authenticateToken, async (req: any, res) => {
     try {
       const reviewData = insertReviewSchema.parse({
         ...req.body,
