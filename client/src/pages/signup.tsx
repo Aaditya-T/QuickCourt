@@ -138,77 +138,156 @@ export default function Signup() {
   // If we're in OTP verification step, show OTP form
   if (otpStep === 'verify') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <Link href="/">
-              <a className="text-3xl font-bold text-primary">QuickCourt</a>
-            </Link>
-            <p className="mt-2 text-gray-600">Verify your email</p>
-          </div>
-
-          <Card>
-            <CardHeader className="text-center">
-              <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-blue-600" />
+      <div className="min-h-screen flex">
+        {/* Left side - Image (hidden on mobile) */}
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-blue-700 items-center justify-center p-12">
+          <div className="max-w-md text-white text-center">
+            <div className="mb-8">
+              <div className="w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center">
+                <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-              <CardTitle>Check Your Email</CardTitle>
-              <CardDescription>
-                We've sent a 6-digit verification code to {formData.email}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleOtpSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="otp">Verification Code</Label>
-                  <Input
-                    id="otp"
-                    type="text"
-                    placeholder="Enter 6-digit code"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    maxLength={6}
-                    className="text-center text-lg tracking-widest"
-                    required
-                  />
+              <h1 className="text-4xl font-bold mb-4">Almost There!</h1>
+              <p className="text-xl text-white/90">
+                Just one more step to verify your email address and join QuickCourt.
+              </p>
+            </div>
+            <div className="space-y-4 text-white/80">
+              <div className="flex items-center justify-center space-x-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Secure account verification</span>
+              </div>
+              <div className="flex items-center justify-center space-x-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Email confirmation</span>
+              </div>
+              <div className="flex items-center justify-center space-x-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Protected platform access</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right side - Form */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-md w-full space-y-8">
+            <div className="text-center">
+              <Link href="/">
+                <a className="text-3xl font-bold text-primary">QuickCourt</a>
+              </Link>
+              <p className="mt-2 text-gray-600">Verify your email</p>
+            </div>
+
+            <Card>
+              <CardHeader className="text-center">
+                <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                  <Shield className="w-6 h-6 text-blue-600" />
                 </div>
-                
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={verifyOtpMutation.isPending || otpCode.length !== 6}
-                >
-                  {verifyOtpMutation.isPending ? "Verifying..." : "Verify & Create Account"}
-                </Button>
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setOtpStep('form')}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Form
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                <CardTitle>Check Your Email</CardTitle>
+                <CardDescription>
+                  We've sent a 6-digit verification code to {formData.email}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleOtpSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="otp">Verification Code</Label>
+                    <Input
+                      id="otp"
+                      type="text"
+                      placeholder="Enter 6-digit code"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      maxLength={6}
+                      className="text-center text-lg tracking-widest"
+                      required
+                    />
+                  </div>
+                  
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={verifyOtpMutation.isPending || otpCode.length !== 6}
+                  >
+                    {verifyOtpMutation.isPending ? "Verifying..." : "Verify & Create Account"}
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setOtpStep('form')}
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Form
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <Link href="/">
-            <a className="text-3xl font-bold text-primary">QuickCourt</a>
-          </Link>
-          <p className="mt-2 text-gray-600">Create your account</p>
+    <div className="min-h-screen flex">
+      {/* Left side - Image (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-blue-700 items-center justify-center p-12">
+        <div className="max-w-md text-white text-center">
+          <div className="mb-8">
+            <div className="w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center">
+              <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+            </div>
+            <h1 className="text-4xl font-bold mb-4">Join QuickCourt!</h1>
+            <p className="text-xl text-white/90">
+              Start your journey with us and discover amazing sports facilities near you.
+            </p>
+          </div>
+          <div className="space-y-4 text-white/80">
+            <div className="flex items-center justify-center space-x-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Easy facility booking</span>
+            </div>
+            <div className="flex items-center justify-center space-x-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Connect with players</span>
+            </div>
+            <div className="flex items-center justify-center space-x-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Manage your sports life</span>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <Card>
+      {/* Right side - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <Link href="/">
+              <a className="text-3xl font-bold text-primary">QuickCourt</a>
+            </Link>
+            <p className="mt-2 text-gray-600">Create your account</p>
+          </div>
+
+          <Card>
           <CardHeader>
             <CardTitle>Get started</CardTitle>
             <CardDescription>
@@ -360,6 +439,7 @@ export default function Signup() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

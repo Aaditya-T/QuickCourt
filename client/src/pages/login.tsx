@@ -39,70 +39,110 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <Link href="/">
-            <a className="text-3xl font-bold text-primary">QuickCourt</a>
-          </Link>
-          <p className="mt-2 text-gray-600">Sign in to your account</p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome back</CardTitle>
-            <CardDescription>
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign in
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center text-sm">
-              <span className="text-gray-600">Don't have an account? </span>
-              <Link href="/signup">
-                <a className="font-medium text-primary hover:text-primary/80">
-                  Sign up
-                </a>
-              </Link>
+    <div className="min-h-screen flex">
+      {/* Left side - Image (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-purple-700 items-center justify-center p-12">
+        <div className="max-w-md text-white text-center">
+          <div className="mb-8">
+            <div className="w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center">
+              <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
             </div>
-          </CardContent>
-        </Card>
+            <h1 className="text-4xl font-bold mb-4">Welcome Back!</h1>
+            <p className="text-xl text-white/90">
+              Book your favorite sports facilities and connect with players in your area.
+            </p>
+          </div>
+          <div className="space-y-4 text-white/80">
+            <div className="flex items-center justify-center space-x-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Book courts instantly</span>
+            </div>
+            <div className="flex items-center justify-center space-x-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Join matches with others</span>
+            </div>
+            <div className="flex items-center justify-center space-x-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Discover local facilities</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right side - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <Link href="/">
+              <a className="text-3xl font-bold text-primary">QuickCourt</a>
+            </Link>
+            <p className="mt-2 text-gray-600">Sign in to your account</p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Welcome back</CardTitle>
+              <CardDescription>
+                Enter your credentials to access your account
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="email">Email address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Sign in
+                </Button>
+              </form>
+
+              <div className="mt-6 text-center text-sm">
+                <span className="text-gray-600">Don't have an account? </span>
+                <Link href="/signup">
+                  <a className="font-medium text-primary hover:text-primary/80">
+                    Sign up
+                  </a>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
