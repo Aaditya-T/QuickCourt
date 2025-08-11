@@ -418,6 +418,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Facility owner routes
+  app.get("/api/owner/facilities", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      const facilities = await storage.getFacilitiesByOwner(req.user.userId);
+      res.json(facilities);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get facilities", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.get("/api/owner/bookings", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      const facilities = await storage.getFacilitiesByOwner(req.user.userId);
+      const facilityIds = facilities.map(f => f.id);
+      
+      if (facilityIds.length === 0) {
+        return res.json([]);
+      }
+      
+      // Get all bookings for the owner's facilities
+      const allBookings = await storage.getBookings();
+      const ownerBookings = allBookings.filter(booking => 
+        facilityIds.includes(booking.facilityId)
+      );
+      
+      res.json(ownerBookings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get bookings", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   // Review routes
   app.get("/api/facilities/:id/reviews", async (req, res) => {
     try {
