@@ -4,15 +4,14 @@ import Navbar from "@/components/ui/navbar";
 import HeroSection from "@/components/ui/hero-section";
 import FacilityCard from "@/components/ui/facility-card";
 import MatchCard from "@/components/ui/match-card";
-import BookingModal from "@/components/ui/booking-modal";
+// Removed inline booking modal on home to streamline UX; navigate to detail page instead
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Search, Calendar, Users, Star } from "lucide-react";
 
 export default function Home() {
-  const [selectedFacility, setSelectedFacility] = useState(null);
-  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [, setLocation] = useLocation();
 
   // Fetch featured facilities
   const { data: facilities = [] } = useQuery({
@@ -35,8 +34,7 @@ export default function Home() {
   });
 
   const handleBookFacility = (facility: any) => {
-    setSelectedFacility(facility);
-    setBookingModalOpen(true);
+    setLocation(`/facilities/${facility.id}`);
   };
 
   const handleJoinMatch = (matchId: string) => {
@@ -277,18 +275,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Booking Modal */}
-      <BookingModal
-        facility={selectedFacility}
-        open={bookingModalOpen}
-        onClose={() => {
-          setBookingModalOpen(false);
-          setSelectedFacility(null);
-        }}
-        onBookingComplete={() => {
-          // Optionally refresh data or navigate to bookings page
-        }}
-      />
+      {/* Booking Modal removed on home page */}
     </div>
   );
 }

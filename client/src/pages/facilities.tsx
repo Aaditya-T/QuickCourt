@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import Navbar from "@/components/ui/navbar";
 import FacilityCard from "@/components/ui/facility-card";
-import BookingModal from "@/components/ui/booking-modal";
+// Removed inline BookingModal usage for a cleaner redirect flow
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,9 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Filter, MapPin } from "lucide-react";
 
 export default function Facilities() {
-  const [location] = useLocation();
-  const [selectedFacility, setSelectedFacility] = useState(null);
-  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [location, setLocation] = useLocation();
   const [filters, setFilters] = useState({
     city: "",
     sportType: "",
@@ -64,8 +62,7 @@ export default function Facilities() {
   };
 
   const handleBookFacility = (facility: any) => {
-    setSelectedFacility(facility);
-    setBookingModalOpen(true);
+    setLocation(`/facilities/${facility.id}`);
   };
 
   if (error) {
@@ -215,18 +212,7 @@ export default function Facilities() {
         )}
       </div>
 
-      {/* Booking Modal */}
-      <BookingModal
-        facility={selectedFacility}
-        open={bookingModalOpen}
-        onClose={() => {
-          setBookingModalOpen(false);
-          setSelectedFacility(null);
-        }}
-        onBookingComplete={() => {
-          // Optionally refresh data or show success message
-        }}
-      />
+      {/* Booking Modal removed on Facilities page */}
     </div>
   );
 }

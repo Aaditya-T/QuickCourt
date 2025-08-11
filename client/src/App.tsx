@@ -10,6 +10,7 @@ import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import Facilities from "@/pages/facilities";
+import Facility from "@/pages/facility";
 import Matches from "@/pages/matches";
 import Dashboard from "@/pages/dashboard";
 import FacilityOwnerDashboard from "@/pages/facility-owner-dashboard";
@@ -22,6 +23,11 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/facilities/:id">
+        <RouteGuard allowedRoles={["user", "admin"]}>
+          <Facility />
+        </RouteGuard>
+      </Route>
       <Route path="/facilities">
         <RouteGuard allowedRoles={["user", "admin"]}>
           <Facilities />

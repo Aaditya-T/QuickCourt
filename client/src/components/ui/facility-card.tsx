@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, Clock, MapPin } from "lucide-react";
+import { Link } from "wouter";
 
 interface Facility {
   id: string;
@@ -53,11 +54,13 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
   return (
     <Card className="facility-card overflow-hidden hover:shadow-xl transition-all duration-300">
       <div className="relative">
-        <img 
-          src={facility.images[0] || defaultImage} 
-          alt={facility.name}
-          className="w-full h-48 object-cover"
-        />
+        <Link href={`/facilities/${facility.id}`}>
+          <img 
+            src={facility.images[0] || defaultImage} 
+            alt={facility.name}
+            className="w-full h-48 object-cover cursor-pointer"
+          />
+        </Link>
         <div className="absolute top-2 right-2">
           <div className="flex flex-wrap gap-1">
             {facility.sportTypes.slice(0, 2).map((sportType) => (
@@ -76,7 +79,9 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
       
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="text-xl font-semibold text-gray-900">{facility.name}</h3>
+          <Link href={`/facilities/${facility.id}`}>
+            <h3 className="text-xl font-semibold text-gray-900 hover:underline cursor-pointer">{facility.name}</h3>
+          </Link>
           <div className="flex items-center">
             <Star className="w-4 h-4 text-yellow-400 fill-current" />
             <span className="ml-1 text-sm text-gray-600">
