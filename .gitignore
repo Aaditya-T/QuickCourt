@@ -7,3 +7,5 @@ vite.config.ts.*
 attached_assets
 .env
 client/.env.local
+/.kiro
+/migrations

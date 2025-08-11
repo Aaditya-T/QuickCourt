@@ -5,48 +5,58 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Mail, Shield, ArrowLeft } from "lucide-react";
+import { Form } from "@/components/ui/form";
+import ValidatedFormField from "@/components/ui/validated-form-field";
+import FormErrorDisplay from "@/components/ui/form-error-display";
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { signupFormSchema, otpVerificationSchema, type SignupFormData, type OtpVerificationData } from "@shared/validation";
 
 export default function Signup() {
   const [, setLocation] = useLocation();
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    firstName: "",
-    lastName: "",
-    phone: "",
-    role: "user",
-    skillLevel: "beginner",
-  });
-  const [isLoading, setIsLoading] = useState(false);
   const [otpStep, setOtpStep] = useState<'form' | 'verify'>('form');
-  const [otpCode, setOtpCode] = useState("");
   const { register } = useAuth();
   const { toast } = useToast();
+
+  // Main signup form
+  const signupForm = useFormValidation<SignupFormData>({
+    schema: signupFormSchema,
+    defaultValues: {
+      username: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      firstName: "",
+      lastName: "",
+      phone: "",
+      role: "user",
+      skillLevel: "beginner",
+    },
+  });
+
+  // OTP verification form
+  const otpForm = useFormValidation<OtpVerificationData>({
+    schema: otpVerificationSchema,
+    defaultValues: {
+      code: "",
+    },
+  });
 
   // Get role from URL params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const role = params.get("role");
-    if (role && ["user", "facility_owner", "admin"].includes(role)) {
-      setFormData(prev => ({ ...prev, role }));
+    if (role && ["user", "facility_owner"].includes(role)) {
+      signupForm.setValue("role", role as "user" | "facility_owner");
     }
-  }, []);
-
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  }, [signupForm]);
 
   // OTP mutations
   const sendOtpMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: SignupFormData) => {
       const { confirmPassword, ...userData } = data;
       return await apiRequest("/api/auth/signup/send-otp", "POST", userData);
     },
@@ -88,39 +98,37 @@ export default function Signup() {
     },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
+  const handleSubmit = signupForm.handleSubmit(
+    async (data: SignupFormData) => {
+      // Send OTP for signup
+      sendOtpMutation.mutate(data);
+    },
+    (errors) => {
       toast({
-        title: "Password mismatch",
-        description: "Passwords do not match. Please try again.",
+        title: "Form Validation Failed",
+        description: "Please fix the errors in the form and try again.",
         variant: "destructive",
       });
-      return;
     }
+  );
 
-    if (formData.password.length < 8) {
+  const handleOtpSubmit = otpForm.handleSubmit(
+    async (otpData: OtpVerificationData) => {
+      const signupData = signupForm.getValues();
+      const { confirmPassword, ...userData } = signupData;
+      verifyOtpMutation.mutate({
+        code: otpData.code,
+        ...userData,
+      });
+    },
+    (errors) => {
       toast({
-        title: "Password too short",
-        description: "Password must be at least 8 characters long.",
+        title: "OTP Validation Failed",
+        description: "Please enter a valid 6-digit code.",
         variant: "destructive",
       });
-      return;
     }
-
-    // Always send OTP for signup
-    sendOtpMutation.mutate(formData);
-  };
-
-  const handleOtpSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const { confirmPassword, ...userData } = formData;
-    verifyOtpMutation.mutate({
-      code: otpCode,
-      ...userData,
-    });
-  };
+  );
 
   // If we're in OTP verification step, show OTP form
   if (otpStep === 'verify') {
@@ -186,43 +194,43 @@ export default function Signup() {
                 </div>
                 <CardTitle>Check Your Email</CardTitle>
                 <CardDescription>
-                  We've sent a 6-digit verification code to {formData.email}
+                  We've sent a 6-digit verification code to {signupForm.getValues("email")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleOtpSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="otp">Verification Code</Label>
-                    <Input
-                      id="otp"
+                <Form {...otpForm}>
+                  <form onSubmit={handleOtpSubmit} className="space-y-4">
+                    <ValidatedFormField
+                      name="code"
+                      label="Verification Code"
                       type="text"
                       placeholder="Enter 6-digit code"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      maxLength={6}
                       className="text-center text-lg tracking-widest"
                       required
+                      description="Enter the 6-digit code sent to your email"
                     />
-                  </div>
-                  
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={verifyOtpMutation.isPending || otpCode.length !== 6}
-                  >
-                    {verifyOtpMutation.isPending ? "Verifying..." : "Verify & Create Account"}
-                  </Button>
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setOtpStep('form')}
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Form
-                  </Button>
-                </form>
+                    
+                    <FormErrorDisplay />
+                    
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={verifyOtpMutation.isPending || !otpForm.formState.isValid}
+                    >
+                      {verifyOtpMutation.isPending ? "Verifying..." : "Verify & Create Account"}
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setOtpStep('form')}
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to Form
+                    </Button>
+                  </form>
+                </Form>
               </CardContent>
             </Card>
           </div>
@@ -294,139 +302,113 @@ export default function Signup() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) => handleChange("firstName", e.target.value)}
+            <Form {...signupForm}>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <ValidatedFormField
+                    name="firstName"
+                    label="First Name"
                     placeholder="John"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
                     required
-                    value={formData.lastName}
-                    onChange={(e) => handleChange("lastName", e.target.value)}
+                  />
+                  <ValidatedFormField
+                    name="lastName"
+                    label="Last Name"
                     placeholder="Doe"
+                    required
                   />
                 </div>
-              </div>
 
-              <div>
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  required
-                  value={formData.username}
-                  onChange={(e) => handleChange("username", e.target.value)}
+                <ValidatedFormField
+                  name="username"
+                  label="Username"
                   placeholder="johndoe"
+                  required
+                  description="Username can only contain letters, numbers, underscores, and hyphens"
                 />
-              </div>
 
-              <div>
-                <Label htmlFor="email">Email address</Label>
-                <Input
-                  id="email"
+                <ValidatedFormField
+                  name="email"
+                  label="Email address"
                   type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
                   placeholder="john@example.com"
+                  required
                 />
-              </div>
 
-              <div>
-                <Label htmlFor="phone">Phone Number (Optional)</Label>
-                <Input
-                  id="phone"
+                <ValidatedFormField
+                  name="phone"
+                  label="Phone Number (Optional)"
                   type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
                   placeholder="+1 (555) 123-4567"
+                  description="Include country code for international numbers"
                 />
-              </div>
 
-              <div>
-                <Label htmlFor="role">Account Type</Label>
-                <Select value={formData.role} onValueChange={(value) => handleChange("role", value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">Player</SelectItem>
-                    <SelectItem value="facility_owner">Facility Owner</SelectItem>
-                    <SelectItem value="admin">Administrator</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {formData.role === "user" && (
-                <div>
-                  <Label htmlFor="skillLevel">Skill Level</Label>
-                  <Select value={formData.skillLevel} onValueChange={(value) => handleChange("skillLevel", value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="beginner">Beginner</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
+                <ValidatedFormField
+                  name="role"
+                  label="Account Type"
+                  type="select"
                   required
-                  value={formData.password}
-                  onChange={(e) => handleChange("password", e.target.value)}
+                  options={[
+                    { value: "user", label: "Player" },
+                    { value: "facility_owner", label: "Facility Owner" }
+                  ]}
+                />
+
+                {signupForm.watch("role") === "user" && (
+                  <ValidatedFormField
+                    name="skillLevel"
+                    label="Skill Level"
+                    type="select"
+                    required
+                    options={[
+                      { value: "beginner", label: "Beginner" },
+                      { value: "intermediate", label: "Intermediate" },
+                      { value: "advanced", label: "Advanced" }
+                    ]}
+                  />
+                )}
+
+                <ValidatedFormField
+                  name="password"
+                  label="Password"
+                  type="password"
                   placeholder="Minimum 8 characters"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
                   required
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                  placeholder="Confirm your password"
+                  description="Must contain uppercase, lowercase, and number"
                 />
-              </div>
 
-              <div className="flex items-center space-x-2 p-4 bg-blue-50 rounded-md">
-                <Mail className="h-4 w-4 text-blue-600" />
-                <div className="flex-1">
-                  <Label className="text-sm font-medium">
-                    Email Verification Required
-                  </Label>
-                  <p className="text-xs text-gray-600 mt-1">
-                    We'll send a verification code to verify your email address
-                  </p>
+                <ValidatedFormField
+                  name="confirmPassword"
+                  label="Confirm Password"
+                  type="password"
+                  placeholder="Confirm your password"
+                  required
+                />
+
+                <FormErrorDisplay />
+
+                <div className="flex items-center space-x-2 p-4 bg-blue-50 rounded-md">
+                  <Mail className="h-4 w-4 text-blue-600" />
+                  <div className="flex-1">
+                    <Label className="text-sm font-medium">
+                      Email Verification Required
+                    </Label>
+                    <p className="text-xs text-gray-600 mt-1">
+                      We'll send a verification code to verify your email address
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={sendOtpMutation.isPending}
-              >
-                {sendOtpMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Send Verification Code
-              </Button>
-            </form>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={sendOtpMutation.isPending || !signupForm.formState.isValid}
+                >
+                  {sendOtpMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send Verification Code
+                </Button>
+              </form>
+            </Form>
 
             <div className="mt-6 text-center text-sm">
               <span className="text-gray-600">Already have an account? </span>
