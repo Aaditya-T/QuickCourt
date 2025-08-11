@@ -1177,6 +1177,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Geocoding endpoint to avoid CORS issues
+  app.get("/api/geocode/:pincode", async (req, res) => {
+    const { pincode } = req.params;
+    
+    if (!pincode || pincode.length !== 6) {
+      return res.status(400).json({ error: "Invalid pincode format" });
+    }
+
+    try {
+      // Try OpenStreetMap Nominatim first
+      const nominatimResponse = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pincode)}&countrycodes=in&limit=1`,
+        {
+          headers: {
+            'User-Agent': 'QuickCourt-SportsBooking/1.0'
+          }
+        }
+      );
+
+      if (nominatimResponse.ok) {
+        const nominatimData = await nominatimResponse.json();
+        if (nominatimData && nominatimData.length > 0) {
+          return res.json({
+            latitude: parseFloat(nominatimData[0].lat),
+            longitude: parseFloat(nominatimData[0].lon),
+            source: 'nominatim'
+          });
+        }
+      }
+
+      // Fallback to postal pincode API
+      const fallbackResponse = await fetch(
+        `https://api.postalpincode.in/pincode/${pincode}`
+      );
+
+      if (fallbackResponse.ok) {
+        const fallbackData = await fallbackResponse.json();
+        if (fallbackData && fallbackData[0] && fallbackData[0].Status === 'Success' && fallbackData[0].PostOffice) {
+          const postOffice = fallbackData[0].PostOffice[0];
+          
+          // State-based approximate coordinates
+          const stateCoords = {
+            'Gujarat': { lat: 23.0225, lng: 72.5714 },
+            'Maharashtra': { lat: 19.7515, lng: 75.7139 },
+            'Karnataka': { lat: 15.3173, lng: 75.7139 },
+            'Tamil Nadu': { lat: 11.1271, lng: 78.6569 },
+            'Delhi': { lat: 28.7041, lng: 77.1025 },
+            'West Bengal': { lat: 22.9868, lng: 87.8550 },
+            'Rajasthan': { lat: 27.0238, lng: 74.2179 },
+            'Uttar Pradesh': { lat: 26.8467, lng: 80.9462 }
+          };
+          
+          const coords = stateCoords[postOffice.State] || { lat: 20.5937, lng: 78.9629 };
+          
+          return res.json({
+            latitude: coords.lat,
+            longitude: coords.lng,
+            source: 'postal-api',
+            state: postOffice.State,
+            district: postOffice.District
+          });
+        }
+      }
+
+      res.status(404).json({ error: "Location not found for this pincode" });
+    } catch (error) {
+      console.error('Geocoding server error:', error);
+      res.status(500).json({ error: "Failed to geocode pincode" });
+    }
+  });
+
   const httpServer = createServer(app);
+
   return httpServer;
 }

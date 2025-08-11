@@ -64,37 +64,22 @@ export default function LocationMap({
     setIsGeocoding(true);
     
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pincode)}&countrycodes=in&limit=1`,
-        {
-          method: 'GET',
-          headers: {
-            'User-Agent': 'QuickCourt/1.0'
-          }
-        }
-      );
+      // Use server-side geocoding endpoint to avoid CORS issues
+      const response = await fetch(`/api/geocode/${pincode}`);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0];
-        const latitude = parseFloat(lat);
-        const longitude = parseFloat(lon);
+      if (response.ok) {
+        const data = await response.json();
+        const { latitude, longitude } = data;
         
         setMapCenter([latitude, longitude]);
-        setMapZoom(13);
+        setMapZoom(data.source === 'postal-api' ? 10 : 13);
         setShowMap(true);
         
-        // Update map view if it exists
         if (mapRef.current) {
-          mapRef.current.setView([latitude, longitude], 13);
+          mapRef.current.setView([latitude, longitude], data.source === 'postal-api' ? 10 : 13);
         }
       } else {
-        console.warn('No geocoding results found for pincode:', pincode);
+        console.warn('Geocoding failed for pincode:', pincode);
         setShowMap(false);
       }
     } catch (error) {
@@ -253,8 +238,14 @@ export default function LocationMap({
         {!showMap && !isGeocoding && zipCode.length === 6 && (
           <div className="text-center py-8 text-gray-500">
             <MapPin className="w-12 h-12 mx-auto mb-4 text-red-300" />
-            <p>Could not find location for pincode {zipCode}</p>
-            <p className="text-sm">Please try a different pincode or use "Use My Location"</p>
+            <p className="font-medium">Could not find exact location for pincode {zipCode}</p>
+            <p className="text-sm mt-2">This might happen due to:</p>
+            <ul className="text-sm mt-1 space-y-1">
+              <li>• Network connectivity issues</li>
+              <li>• Invalid or non-existent pincode</li>
+              <li>• Geocoding service temporarily unavailable</li>
+            </ul>
+            <p className="text-sm mt-3 font-medium">Try using "Use My Location" button instead</p>
           </div>
         )}
 
