@@ -92,6 +92,7 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
     zipCode: "",
     latitude: null as number | null,
     longitude: null as number | null,
+    images: [] as string[],
   });
 
   const [gameCourts, setGameCourts] = useState<GameCourt[]>([]);
@@ -129,6 +130,7 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
           zipCode: facility.zipCode || "",
           latitude: facility.latitude ? parseFloat(facility.latitude) : null,
           longitude: facility.longitude ? parseFloat(facility.longitude) : null,
+          images: facility.images || [],
         });
         setSelectedAmenities(facility.amenities || []);
         
@@ -159,6 +161,7 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
           zipCode: "",
           latitude: null,
           longitude: null,
+          images: [],
         });
         setGameCourts([]);
         setSelectedAmenities([]);
@@ -189,6 +192,10 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
 
   const handleZipCodeChange = (zipCode: string) => {
     setFormData(prev => ({ ...prev, zipCode }));
+  };
+
+  const handleImagesChange = (images: string[]) => {
+    setFormData(prev => ({ ...prev, images }));
   };
 
   const handleGameCourtChange = (gameId: string, field: 'courtCount' | 'pricePerHour', value: number) => {
@@ -387,11 +394,13 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
             <LocationMap
               onLocationChange={handleLocationChange}
               onZipCodeChange={handleZipCodeChange}
+              onImagesChange={handleImagesChange}
               initialCoordinates={{
                 latitude: formData.latitude,
                 longitude: formData.longitude,
               }}
               initialZipCode={formData.zipCode}
+              initialImages={formData.images}
             />
           </TabsContent>
 
