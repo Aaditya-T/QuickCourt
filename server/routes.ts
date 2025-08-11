@@ -421,9 +421,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Facility owner routes
   app.get("/api/owner/facilities", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
     try {
+      console.log('Getting facilities for user:', req.user.userId, 'role:', req.user.role);
       const facilities = await storage.getFacilitiesByOwner(req.user.userId);
+      console.log('Found facilities:', facilities.length, 'facilities');
       res.json(facilities);
     } catch (error) {
+      console.error('Error getting owner facilities:', error);
       res.status(500).json({ message: "Failed to get facilities", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
