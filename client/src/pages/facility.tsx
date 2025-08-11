@@ -981,24 +981,6 @@ export default function Facility() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {/* Review Stats */}
-                      <div className="flex items-center gap-6 p-4 bg-gray-50 rounded-lg">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-gray-900">{facility.rating}</div>
-                          <div className="text-sm text-gray-600">Average Rating</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-gray-900">{reviews.length}</div>
-                          <div className="text-sm text-gray-600">Total Reviews</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-gray-900">
-                            {reviews.filter(r => r.rating >= 4).length}
-                          </div>
-                          <div className="text-sm text-gray-600">Positive Reviews</div>
-                        </div>
-                      </div>
-
                       {/* Reviews List */}
                       <div className="space-y-3 max-h-96 overflow-y-auto">
                         {reviews.slice(0, 6).map((review) => (
