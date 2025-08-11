@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import LocationMap from "@/components/ui/location-map";
+import PhotoUpload from "@/components/ui/photo-upload";
 import { 
   Building, 
   MapPin, 
@@ -314,9 +315,10 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
         </DialogHeader>
 
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="location">Location</TabsTrigger>
+            <TabsTrigger value="photos">Photos</TabsTrigger>
             <TabsTrigger value="games">Games & Courts</TabsTrigger>
             <TabsTrigger value="amenities">Amenities</TabsTrigger>
             <TabsTrigger value="hours">Hours</TabsTrigger>
@@ -394,13 +396,19 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
             <LocationMap
               onLocationChange={handleLocationChange}
               onZipCodeChange={handleZipCodeChange}
-              onImagesChange={handleImagesChange}
               initialCoordinates={{
                 latitude: formData.latitude,
                 longitude: formData.longitude,
               }}
               initialZipCode={formData.zipCode}
+            />
+          </TabsContent>
+
+          <TabsContent value="photos" className="space-y-6">
+            <PhotoUpload
+              onImagesChange={handleImagesChange}
               initialImages={formData.images}
+              maxImages={5}
             />
           </TabsContent>
 

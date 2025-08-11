@@ -5,9 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin, Search, Navigation, Upload, X, Image } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { MapPin, Search, Navigation } from 'lucide-react';
 // Note: leaflet CSS is loaded globally via index.css
 
 // Fix for default markers in Leaflet
@@ -21,10 +19,8 @@ L.Icon.Default.mergeOptions({
 interface LocationMapProps {
   onLocationChange: (coordinates: { latitude: number; longitude: number }) => void;
   onZipCodeChange: (zipCode: string) => void;
-  onImagesChange: (images: string[]) => void;
   initialCoordinates?: { latitude?: string | number | null; longitude?: string | number | null };
   initialZipCode?: string;
-  initialImages?: string[];
 }
 
 // Map event handler component
@@ -40,10 +36,8 @@ function MapClickHandler({ onLocationChange }: { onLocationChange: (lat: number,
 export default function LocationMap({ 
   onLocationChange,
   onZipCodeChange,
-  onImagesChange,
   initialCoordinates,
-  initialZipCode,
-  initialImages
+  initialZipCode
 }: LocationMapProps) {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
@@ -51,11 +45,7 @@ export default function LocationMap({
   const [mapZoom, setMapZoom] = useState(13);
   const [zipCode, setZipCode] = useState(initialZipCode || '');
   const [showMap, setShowMap] = useState(false);
-  const [images, setImages] = useState<string[]>(initialImages || []);
-  const [isUploading, setIsUploading] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
 
   // Initialize coordinates from props
   useEffect(() => {
@@ -143,68 +133,7 @@ export default function LocationMap({
     }
   };
 
-  // Handle file selection and upload
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
 
-    if (images.length + files.length > 5) {
-      toast({
-        title: "Too many images",
-        description: "You can upload a maximum of 5 images",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const formData = new FormData();
-        formData.append('image', file);
-
-        const response = await apiRequest('POST', '/api/upload/image', formData);
-
-        if (!response.ok) {
-          throw new Error('Upload failed');
-        }
-
-        const result = await response.json();
-        return result.image.url;
-      });
-
-      const uploadedUrls = await Promise.all(uploadPromises);
-      const updatedImages = [...images, ...uploadedUrls];
-      
-      setImages(updatedImages);
-      onImagesChange(updatedImages);
-
-      toast({
-        title: "Images uploaded",
-        description: `Successfully uploaded ${uploadedUrls.length} image(s)`,
-      });
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload one or more images. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  // Handle image removal
-  const handleRemoveImage = (imageUrl: string) => {
-    const updatedImages = images.filter(url => url !== imageUrl);
-    setImages(updatedImages);
-    onImagesChange(updatedImages);
-  };
 
   return (
     <Card>
@@ -247,69 +176,7 @@ export default function LocationMap({
           </div>
         </div>
 
-        {/* Photo Upload Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Image className="w-4 h-4" />
-            <Label>Facility Photos (Optional)</Label>
-          </div>
-          
-          <div className="flex gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              variant="outline"
-              size="sm"
-              disabled={isUploading || images.length >= 5}
-              className="flex-shrink-0"
-            >
-              {isUploading ? (
-                <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mr-1" />
-              ) : (
-                <Upload className="w-4 h-4 mr-1" />
-              )}
-              {isUploading ? 'Uploading...' : 'Add Photos'}
-            </Button>
-            {images.length > 0 && (
-              <span className="text-sm text-gray-500 self-center">
-                {images.length}/5 photos
-              </span>
-            )}
-          </div>
 
-          {/* Image Preview Grid */}
-          {images.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {images.map((imageUrl, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={imageUrl}
-                    alt={`Facility photo ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                  />
-                  <button
-                    onClick={() => handleRemoveImage(imageUrl)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Remove image"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="text-xs text-gray-500">
-            Upload up to 5 high-quality photos of your facility. Accepted formats: JPEG, PNG, WebP (max 5MB each)
-          </div>
-        </div>
 
         {/* Interactive Map - Only show when pincode is entered */}
         {showMap && (
