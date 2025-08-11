@@ -498,21 +498,7 @@ export default function Facility() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Sports Available */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Available Sports</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {facility.sportTypes?.map((sport: string) => (
-                          <Badge
-                            key={sport}
-                            variant="secondary"
-                            className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-0"
-                          >
-                            {sportIcons[sport]} {sportTypeLabels[sport] || sport}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
+                    
 
                     {/* Available Amenities */}
                     <div>
