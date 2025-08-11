@@ -54,7 +54,9 @@ export default function Facilities() {
   });
 
   const handleFilterChange = (field: string, value: string) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
+    // Convert "all" back to empty string for API filtering
+    const filterValue = value === "all" ? "" : value;
+    setFilters(prev => ({ ...prev, [field]: filterValue }));
   };
 
   const handleSearch = () => {
@@ -129,12 +131,12 @@ export default function Facilities() {
                   <Filter className="w-4 h-4 inline mr-1" />
                   Sport Type
                 </Label>
-                <Select value={filters.sportType} onValueChange={(value) => handleFilterChange("sportType", value)}>
+                <Select value={filters.sportType || "all"} onValueChange={(value) => handleFilterChange("sportType", value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Sports" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Sports</SelectItem>
+                    <SelectItem value="all">All Sports</SelectItem>
                     <SelectItem value="badminton">Badminton</SelectItem>
                     <SelectItem value="tennis">Tennis</SelectItem>
                     <SelectItem value="basketball">Basketball</SelectItem>
