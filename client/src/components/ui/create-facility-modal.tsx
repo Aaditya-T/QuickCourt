@@ -1,16 +1,18 @@
-import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Form } from "@/components/ui/form";
+import ValidatedFormField from "@/components/ui/validated-form-field";
+import FormErrorDisplay from "@/components/ui/form-error-display";
+import { Button } from "@/components/ui/button";
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { facilityFormSchema, type FacilityFormData } from "@shared/validation";
 import {
-  BasicInformation,
-  Location,
   OperatingHours,
   Amenities,
   Images,
-  FormActions
 } from "./facility-form";
 
 interface CreateFacilityModalProps {
@@ -22,31 +24,41 @@ interface CreateFacilityModalProps {
 export default function CreateFacilityModal({ open, onClose, onFacilityCreated }: CreateFacilityModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    sportTypes: [] as string[],
-    pricePerHour: "",
-    images: [] as string[],
-    amenities: [] as string[],
-    operatingHours: JSON.stringify({
-      monday: { open: "06:00", close: "23:00" },
-      tuesday: { open: "06:00", close: "23:00" },
-      wednesday: { open: "06:00", close: "23:00" },
-      thursday: { open: "06:00", close: "23:00" },
-      friday: { open: "06:00", close: "23:00" },
-      saturday: { open: "08:00", close: "22:00" },
-      sunday: { closed: true },
-    }),
+
+  // Facility form with validation
+  const facilityForm = useFormValidation<FacilityFormData>({
+    schema: facilityFormSchema,
+    defaultValues: {
+      name: "",
+      description: "",
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      sportTypes: [],
+      pricePerHour: 800,
+      images: [],
+      amenities: [],
+      operatingHours: {
+        monday: { open: "06:00", close: "23:00" },
+        tuesday: { open: "06:00", close: "23:00" },
+        wednesday: { open: "06:00", close: "23:00" },
+        thursday: { open: "06:00", close: "23:00" },
+        friday: { open: "06:00", close: "23:00" },
+        saturday: { open: "08:00", close: "22:00" },
+        sunday: { closed: true },
+      },
+    },
   });
 
   const createFacilityMutation = useMutation({
-    mutationFn: async (facilityData: any) => {
-      return await apiRequest("/api/facilities", "POST", facilityData);
+    mutationFn: async (facilityData: FacilityFormData) => {
+      const submitData = {
+        ...facilityData,
+        ownerId: user?.id,
+        operatingHours: JSON.stringify(facilityData.operatingHours),
+      };
+      return await apiRequest("/api/facilities", "POST", submitData);
     },
     onSuccess: () => {
       toast({
@@ -55,7 +67,7 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
       });
       onFacilityCreated?.();
       onClose();
-      resetForm();
+      facilityForm.reset();
     },
     onError: (error: any) => {
       toast({
@@ -66,112 +78,56 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
     },
   });
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      sportTypes: [],
-      pricePerHour: "",
-      images: [],
-      amenities: [],
-      operatingHours: JSON.stringify({
-        monday: { open: "06:00", close: "23:00" },
-        tuesday: { open: "06:00", close: "23:00" },
-        wednesday: { open: "06:00", close: "23:00" },
-        thursday: { open: "06:00", close: "23:00" },
-        friday: { open: "06:00", close: "23:00" },
-        saturday: { open: "08:00", close: "22:00" },
-        sunday: { closed: true },
-      }),
-    });
-  };
-
-  const handleFieldChange = (field: string, value: string) => {
-    // setFormData(prev => ({ ...prev, [field]: value }));
-    //if field is name, change to lowercase
-    if (field === "name") {
-      setFormData(prev => ({ ...prev, [field]: value.toLowerCase() }));
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
-    }
-  };
-
   const handleSportTypeToggle = (sportType: string) => {
-    setFormData(prev => ({
-      ...prev,
-      sportTypes: prev.sportTypes.includes(sportType)
-        ? prev.sportTypes.filter(type => type !== sportType)
-        : [...prev.sportTypes, sportType]
-    }));
+    const currentSportTypes = facilityForm.getValues("sportTypes");
+    const newSportTypes = currentSportTypes.includes(sportType)
+      ? currentSportTypes.filter(type => type !== sportType)
+      : [...currentSportTypes, sportType];
+    facilityForm.setValue("sportTypes", newSportTypes);
   };
 
   const handleAmenitiesChange = (amenities: string[]) => {
-    setFormData(prev => ({ ...prev, amenities }));
+    facilityForm.setValue("amenities", amenities);
   };
 
   const handleImagesChange = (images: string[]) => {
-    setFormData(prev => ({ ...prev, images }));
+    facilityForm.setValue("images", images);
   };
 
-  const handleOperatingHoursChange = (operatingHours: string) => {
-    setFormData(prev => ({ ...prev, operatingHours }));
+  const handleOperatingHoursChange = (operatingHours: any) => {
+    facilityForm.setValue("operatingHours", operatingHours);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!user || user.role !== "facility_owner") {
-      toast({
-        title: "Permission Denied",
-        description: "You must be a facility owner to create facilities.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (formData.sportTypes.length === 0) {
-      toast({
-        title: "Validation Error",
-        description: "Please select at least one sport type.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate operating hours
-    try {
-      const hours = JSON.parse(formData.operatingHours);
-      for (const [day, dayHours] of Object.entries(hours)) {
-        const typedDayHours = dayHours as { closed?: boolean; open?: string; close?: string };
-        if (!typedDayHours.closed && (!typedDayHours.open || !typedDayHours.close)) {
-          toast({
-            title: "Validation Error",
-            description: `Please set opening and closing times for ${day.charAt(0).toUpperCase() + day.slice(1)} or mark it as closed.`,
-            variant: "destructive",
-          });
-          return;
-        }
+  const handleSubmit = facilityForm.handleSubmit(
+    async (data: FacilityFormData) => {
+      if (!user || user.role !== "facility_owner") {
+        toast({
+          title: "Permission Denied",
+          description: "You must be a facility owner to create facilities.",
+          variant: "destructive",
+        });
+        return;
       }
-    } catch (error) {
+
+      createFacilityMutation.mutate(data);
+    },
+    (errors) => {
       toast({
-        title: "Validation Error",
-        description: "Invalid operating hours format.",
+        title: "Form Validation Failed",
+        description: "Please fix the errors in the form and try again.",
         variant: "destructive",
       });
-      return;
     }
+  );
 
-    const facilityData = {
-      ...formData,
-      ownerId: user.id,
-    };
-
-    createFacilityMutation.mutate(facilityData);
-  };
+  const SPORT_TYPES = [
+    { value: "badminton", label: "Badminton" },
+    { value: "tennis", label: "Tennis" },
+    { value: "basketball", label: "Basketball" },
+    { value: "football", label: "Football" },
+    { value: "table_tennis", label: "Table Tennis" },
+    { value: "squash", label: "Squash" },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -179,50 +135,134 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
         <DialogHeader>
           <DialogTitle>Add New Facility</DialogTitle>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-          <BasicInformation
-            formData={{
-              name: formData.name,
-              description: formData.description,
-              sportTypes: formData.sportTypes,
-              pricePerHour: formData.pricePerHour,
-            }}
-            onFieldChange={handleFieldChange}
-            onSportTypeToggle={handleSportTypeToggle}
-          />
 
-          <Location
-            formData={{
-              address: formData.address,
-              city: formData.city,
-              state: formData.state,
-              zipCode: formData.zipCode,
-            }}
-            onFieldChange={handleFieldChange}
-          />
+        <Form {...facilityForm}>
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Basic Information</h3>
 
-          <OperatingHours
-            operatingHours={formData.operatingHours}
-            onOperatingHoursChange={handleOperatingHoursChange}
-          />
+              <ValidatedFormField
+                name="name"
+                label="Facility Name"
+                placeholder="Elite Badminton Center"
+                required
+              />
 
-          <Amenities
-            amenities={formData.amenities}
-            onAmenitiesChange={handleAmenitiesChange}
-          />
+              <ValidatedFormField
+                name="description"
+                label="Description"
+                type="textarea"
+                placeholder="Describe your facility..."
+                rows={3}
+              />
 
-          <Images
-            images={formData.images}
-            onImagesChange={handleImagesChange}
-          />
+              {/* Sport Types - Custom implementation */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sport Types *</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {SPORT_TYPES.map((sport) => (
+                    <div key={sport.value} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={sport.value}
+                        checked={facilityForm.watch("sportTypes").includes(sport.value)}
+                        onChange={() => handleSportTypeToggle(sport.value)}
+                        className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                      />
+                      <label htmlFor={sport.value} className="text-sm font-normal">
+                        {sport.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                {facilityForm.formState.errors.sportTypes && (
+                  <p className="text-sm text-destructive">
+                    {facilityForm.formState.errors.sportTypes.message}
+                  </p>
+                )}
+              </div>
 
-          <FormActions
-            onCancel={onClose}
-            submitText="Create Facility"
-            isSubmitting={createFacilityMutation.isPending}
-          />
-        </form>
+              <ValidatedFormField
+                name="pricePerHour"
+                label="Price per Hour (₹)"
+                type="number"
+                placeholder="800"
+                required
+              />
+            </div>
+
+            {/* Location */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Location</h3>
+
+              <ValidatedFormField
+                name="address"
+                label="Address"
+                placeholder="123 Sports Complex Road"
+                required
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ValidatedFormField
+                  name="city"
+                  label="City"
+                  placeholder="Mumbai"
+                  required
+                />
+
+                <ValidatedFormField
+                  name="state"
+                  label="State"
+                  placeholder="Maharashtra"
+                  required
+                />
+              </div>
+
+              <ValidatedFormField
+                name="zipCode"
+                label="ZIP Code"
+                placeholder="400001"
+                required
+              />
+            </div>
+
+            <OperatingHours
+              operatingHours={JSON.stringify(facilityForm.watch("operatingHours"))}
+              onOperatingHoursChange={handleOperatingHoursChange}
+            />
+
+            <Amenities
+              amenities={facilityForm.watch("amenities")}
+              onAmenitiesChange={handleAmenitiesChange}
+            />
+
+            <Images
+              images={facilityForm.watch("images")}
+              onImagesChange={handleImagesChange}
+            />
+
+            <FormErrorDisplay />
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createFacilityMutation.isPending || !facilityForm.formState.isValid}
+                className="w-full sm:flex-1"
+              >
+                {createFacilityMutation.isPending ? "Creating..." : "Create Facility"}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

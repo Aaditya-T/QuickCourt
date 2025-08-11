@@ -1,42 +1,59 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Form } from "@/components/ui/form";
+import ValidatedFormField from "@/components/ui/validated-form-field";
+import FormErrorDisplay from "@/components/ui/form-error-display";
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { loginFormSchema, type LoginFormData } from "@shared/validation";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  // Login form with validation
+  const loginForm = useFormValidation<LoginFormData>({
+    schema: loginFormSchema,
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-    try {
-      await login(email, password);
+  const handleSubmit = loginForm.handleSubmit(
+    async (data: LoginFormData) => {
+      setIsLoading(true);
+      try {
+        await login(data.email, data.password);
+        toast({
+          title: "Login successful",
+          description: "Welcome back to QuickCourt!",
+        });
+        setLocation("/dashboard");
+      } catch (error: any) {
+        toast({
+          title: "Login failed",
+          description: error.message || "Invalid credentials. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    (errors) => {
       toast({
-        title: "Login successful",
-        description: "Welcome back to QuickCourt!",
-      });
-      setLocation("/dashboard");
-    } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid credentials. Please try again.",
+        title: "Form Validation Failed",
+        description: "Please fix the errors in the form and try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  );
 
   return (
     <div className="min-h-screen flex">
@@ -101,42 +118,36 @@ export default function Login() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="email">Email address</Label>
-                  <Input
-                    id="email"
+              <Form {...loginForm}>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <ValidatedFormField
+                    name="email"
+                    label="Email address"
                     type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
                     required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
                   />
-                </div>
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading}
-                >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign in
-                </Button>
-              </form>
+                  <ValidatedFormField
+                    name="password"
+                    label="Password"
+                    type="password"
+                    placeholder="Enter your password"
+                    required
+                  />
+
+                  <FormErrorDisplay />
+
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isLoading || !loginForm.formState.isValid}
+                  >
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Sign in
+                  </Button>
+                </form>
+              </Form>
 
               <div className="mt-6 text-center text-sm">
                 <span className="text-gray-600">Don't have an account? </span>

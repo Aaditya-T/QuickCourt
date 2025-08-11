@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, decimal, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, decimal, boolean, pgEnum, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -44,6 +44,8 @@ export const facilities = pgTable("facilities", {
   city: text("city").notNull(),
   state: text("state").notNull(),
   zipCode: text("zip_code").notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
   sportTypes: text("sport_types").array().notNull(),
   pricePerHour: decimal("price_per_hour", { precision: 10, scale: 2 }).notNull(),
   images: text("images").array().default([]),
@@ -52,9 +54,21 @@ export const facilities = pgTable("facilities", {
   isActive: boolean("is_active").default(true),
   rating: decimal("rating", { precision: 2, scale: 1 }).default("0.0"),
   totalReviews: integer("total_reviews").default(0),
+  // Facility approval fields
+  isApproved: boolean("is_approved").default(false),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Index for efficient querying of approved facilities
+  approvedActiveIdx: index("idx_facilities_approved_active").on(table.isApproved, table.isActive).where(sql`${table.isApproved} = true AND ${table.isActive} = true`),
+  // Index for admin queries on approval status
+  approvalStatusIdx: index("idx_facilities_approval_status").on(table.isApproved, table.createdAt),
+  // Index for rating-based queries (descending order for better performance)
+  ratingIdx: index("idx_facilities_rating").on(table.rating),
+}));
 
 export const bookings = pgTable("bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -119,6 +133,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
   owner: one(users, { fields: [facilities.ownerId], references: [users.id] }),
+  approver: one(users, { fields: [facilities.approvedBy], references: [users.id] }),
   bookings: many(bookings),
   matches: many(matches),
   reviews: many(reviews),
