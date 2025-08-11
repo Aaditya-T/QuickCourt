@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { useAuth } from '@/lib/auth';
 
 interface PhotoUploadProps {
   onImagesChange: (images: string[]) => void;
@@ -20,6 +20,7 @@ export default function PhotoUpload({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { token } = useAuth();
 
   // Handle file selection and upload
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,7 +46,7 @@ export default function PhotoUpload({
         const response = await fetch('/api/upload/image', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           },
           body: formData
         });
