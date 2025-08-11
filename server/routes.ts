@@ -18,11 +18,6 @@ const otpRateLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  // Key generator to identify users (by IP address)
-  keyGenerator: (req) => {
-    // Use IP address as the key for rate limiting
-    return req.ip || req.connection.remoteAddress || 'unknown';
-  },
   // Handler for when rate limit is exceeded
   handler: (req, res) => {
     res.status(429).json({
