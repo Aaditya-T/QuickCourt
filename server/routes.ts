@@ -376,13 +376,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/facilities", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
     try {
+      const { gameCourts, ...facilityFields } = req.body;
+      
       const facilityData = insertFacilitySchema.parse({
-        ...req.body,
+        ...facilityFields,
         ownerId: req.user.userId,
       });
       
       const facility = await storage.createFacility(facilityData);
-      res.status(201).json(facility);
+      
+      // Create facility courts if provided
+      if (gameCourts && Array.isArray(gameCourts)) {
+        for (const court of gameCourts) {
+          try {
+            const courtData = insertFacilityCourtSchema.parse({
+              facilityId: facility.id,
+              gameId: court.gameId,
+              courtCount: court.courtCount,
+              pricePerHour: court.pricePerHour.toString(),
+            });
+            await storage.createFacilityCourt(courtData);
+          } catch (courtError) {
+            console.error("Error creating facility court:", courtError);
+          }
+        }
+      }
+      
+      // Return facility with courts populated
+      const facilityWithCourts = await storage.getFacility(facility.id);
+      res.status(201).json(facilityWithCourts);
     } catch (error) {
       res.status(400).json({ message: "Invalid facility data", error: error instanceof Error ? error.message : "Unknown error" });
     }
@@ -400,11 +422,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to update this facility" });
       }
 
-      const updates = req.body;
-      delete updates.ownerId; // Don't allow owner changes through this route
+      const { gameCourts, ...facilityUpdates } = req.body;
+      delete facilityUpdates.ownerId; // Don't allow owner changes through this route
       
-      const updatedFacility = await storage.updateFacility(req.params.id, updates);
-      res.json(updatedFacility);
+      // Update facility
+      const updatedFacility = await storage.updateFacility(req.params.id, facilityUpdates);
+      
+      // Update facility courts if provided
+      if (gameCourts && Array.isArray(gameCourts)) {
+        // Get existing courts for this facility
+        const existingCourts = await storage.getFacilityCourts(req.params.id);
+        
+        // Delete courts that are no longer needed
+        const newGameIds = gameCourts.map(court => court.gameId);
+        for (const existingCourt of existingCourts) {
+          if (!newGameIds.includes(existingCourt.gameId)) {
+            await storage.deleteFacilityCourt(existingCourt.id);
+          }
+        }
+        
+        // Create or update courts
+        for (const court of gameCourts) {
+          const existingCourt = existingCourts.find(ec => ec.gameId === court.gameId);
+          
+          if (existingCourt) {
+            // Update existing court
+            await storage.updateFacilityCourt(existingCourt.id, {
+              courtCount: court.courtCount,
+              pricePerHour: court.pricePerHour.toString(),
+            });
+          } else {
+            // Create new court
+            try {
+              const courtData = insertFacilityCourtSchema.parse({
+                facilityId: req.params.id,
+                gameId: court.gameId,
+                courtCount: court.courtCount,
+                pricePerHour: court.pricePerHour.toString(),
+              });
+              await storage.createFacilityCourt(courtData);
+            } catch (courtError) {
+              console.error("Error creating facility court:", courtError);
+            }
+          }
+        }
+      }
+      
+      // Return updated facility with courts
+      const facilityWithCourts = await storage.getFacility(req.params.id);
+      res.json(facilityWithCourts);
     } catch (error) {
       res.status(500).json({ message: "Failed to update facility", error: error instanceof Error ? error.message : "Unknown error" });
     }

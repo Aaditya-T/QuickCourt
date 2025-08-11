@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import Navbar from "@/components/ui/navbar";
-import CreateFacilityModal from "@/components/ui/create-facility-modal";
-import EditFacilityModal from "@/components/ui/edit-facility-modal";
+import FacilityModal from "@/components/ui/facility-modal";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,8 +31,8 @@ import {
 export default function FacilityOwnerDashboard() {
   const { user, token } = useAuth();
   const { toast } = useToast();
-  const [createFacilityModalOpen, setCreateFacilityModalOpen] = useState(false);
-  const [editFacilityModalOpen, setEditFacilityModalOpen] = useState(false);
+  const [facilityModalOpen, setFacilityModalOpen] = useState(false);
+  const [facilityModalMode, setFacilityModalMode] = useState<"create" | "edit">("create");
   const [facilityToEdit, setFacilityToEdit] = useState<any>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [facilityToDelete, setFacilityToDelete] = useState<any>(null);
@@ -72,10 +71,23 @@ export default function FacilityOwnerDashboard() {
     },
   });
 
+  // Function to open create modal
+  const openCreateModal = () => {
+    setFacilityToEdit(null);
+    setFacilityModalMode("create");
+    setFacilityModalOpen(true);
+  };
+
+  // Function to open edit modal
+  const openEditModal = (facility: any) => {
+    setFacilityToEdit(facility);
+    setFacilityModalMode("edit");
+    setFacilityModalOpen(true);
+  };
+
   // Function to open edit modal
   const handleEditFacility = (facility: any) => {
-    setFacilityToEdit(facility);
-    setEditFacilityModalOpen(true);
+    openEditModal(facility);
   };
 
   // Function to open delete confirmation
@@ -259,7 +271,7 @@ export default function FacilityOwnerDashboard() {
                   <span>My Facilities</span>
                   <Button 
                     size="sm" 
-                    onClick={() => setCreateFacilityModalOpen(true)}
+                    onClick={openCreateModal}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Facility
@@ -318,7 +330,7 @@ export default function FacilityOwnerDashboard() {
                     <p className="text-gray-500 mb-6">
                       Add your first facility to start accepting bookings and growing your business.
                     </p>
-                    <Button onClick={() => setCreateFacilityModalOpen(true)}>
+                    <Button onClick={openCreateModal}>
                       <Plus className="w-4 h-4 mr-2" />
                       Add Your First Facility
                     </Button>
@@ -435,26 +447,15 @@ export default function FacilityOwnerDashboard() {
         </Tabs>
       </div>
 
-      {/* Create Facility Modal */}
-      <CreateFacilityModal
-        open={createFacilityModalOpen}
-        onClose={() => setCreateFacilityModalOpen(false)}
-        onFacilityCreated={() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
-        }}
-      />
-
-      {/* Edit Facility Modal */}
-      <EditFacilityModal
-        open={editFacilityModalOpen}
+      {/* Facility Modal */}
+      <FacilityModal
+        open={facilityModalOpen}
         onClose={() => {
-          setEditFacilityModalOpen(false);
+          setFacilityModalOpen(false);
           setFacilityToEdit(null);
         }}
         facility={facilityToEdit}
-        onFacilityUpdated={() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
-        }}
+        mode={facilityModalMode}
       />
 
       {/* Delete Confirmation Dialog */}

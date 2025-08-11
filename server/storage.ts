@@ -160,7 +160,18 @@ export class DatabaseStorage implements IStorage {
 
   async getFacility(id: string): Promise<Facility | undefined> {
     const [facility] = await db.select().from(facilities).where(eq(facilities.id, id));
-    return facility || undefined;
+    
+    if (!facility) {
+      return undefined;
+    }
+
+    // Get facility courts for this facility
+    const courts = await this.getFacilityCourts(id);
+    
+    return {
+      ...facility,
+      facilityCourts: courts
+    } as any;
   }
 
   async getFacilitiesByOwner(ownerId: string): Promise<Facility[]> {
