@@ -127,8 +127,14 @@ export default function Signup() {
     return (
       <div className="min-h-screen flex">
         {/* Left side - Image (hidden on mobile) */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-blue-700 items-center justify-center p-12">
-          <div className="max-w-md text-white text-center">
+        <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-0">
+          <img
+            src="https://playo.gumlet.io/NOTOUTBOXCRICKET20241014080826692939/NotOutBoxCricket1729064460099.jpg"
+            alt="Sports facility"
+            className="absolute inset-0 w-full h-full object-cover blur-sm"
+          />
+          <div className="absolute inset-0 bg-black/50"></div>
+          <div className="relative z-10 max-w-md text-white text-center p-12">
             <div className="mb-8">
               <div className="w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center">
                 <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,8 +234,14 @@ export default function Signup() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Image (hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-blue-700 items-center justify-center p-12">
-        <div className="max-w-md text-white text-center">
+      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-0">
+        <img
+          src="https://playo.gumlet.io/NOTOUTBOXCRICKET20241014080826692939/NotOutBoxCricket1729064460099.jpg"
+          alt="Sports facility"
+          className="absolute inset-0 w-full h-full object-cover blur-sm"
+        />
+        <div className="absolute inset-0 bg-black/50"></div>
+        <div className="relative z-10 max-w-md text-white text-center p-12">
           <div className="mb-8">
             <div className="w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center">
               <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
