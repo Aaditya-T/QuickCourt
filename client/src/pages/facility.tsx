@@ -498,8 +498,6 @@ export default function Facility() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    
-
                     {/* Available Amenities */}
                     <div>
                       <h4 className="text-sm font-semibold text-gray-700 mb-2">Available Amenities</h4>
