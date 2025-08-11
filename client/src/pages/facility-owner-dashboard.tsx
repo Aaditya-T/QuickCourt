@@ -10,12 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -24,15 +18,12 @@ import {
   Plus,
   Building,
   Calendar,
-  Users,
   TrendingUp,
-  MoreVertical,
   Edit,
   Trash,
   MapPin,
   Star,
   Clock,
-  Eye,
   Power,
   PowerOff
 } from "lucide-react";
@@ -62,7 +53,7 @@ export default function FacilityOwnerDashboard() {
   // Delete facility mutation
   const deleteFacilityMutation = useMutation({
     mutationFn: async (facilityId: string) => {
-      return await apiRequest("DELETE", `/api/facilities/${facilityId}`, {});
+      return await apiRequest(`/api/facilities/${facilityId}`, "DELETE", {});
     },
     onSuccess: () => {
       toast({
@@ -469,6 +460,8 @@ export default function FacilityOwnerDashboard() {
             deleteFacilityMutation.mutate(facilityToDelete.id);
             setDeleteConfirmOpen(false);
             setFacilityToDelete(null);
+
+            queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
           }
         }}
         title="Delete Facility"

@@ -157,7 +157,7 @@ export default function ReportsTab() {
               <Input
                 placeholder="Search reports by user, facility, or category..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
                 className="pl-10"
               />
             </div>

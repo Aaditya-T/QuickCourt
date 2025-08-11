@@ -213,62 +213,6 @@ export default function Facilities() {
           </CardContent>
         </Card>
 
-        {/* Results Header */}
-        <div className="mb-8">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    {isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                        Searching facilities...
-                      </div>
-                    ) : (
-                      `${facilities.length} Amazing Facilities Found`
-                    )}
-                  </h2>
-                  {(filters.city || filters.sportType || filters.searchTerm || filters.priceRange) && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <span className="text-sm text-gray-600">Filtered by:</span>
-                      {filters.city && (
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                          📍 {filters.city}
-                        </Badge>
-                      )}
-                      {filters.sportType && filters.sportType !== "all" && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          {sportIcons[filters.sportType]} {sportTypeLabels[filters.sportType]}
-                        </Badge>
-                      )}
-                      {filters.searchTerm && (
-                        <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                          🔍 "{filters.searchTerm}"
-                        </Badge>
-                      )}
-                      {filters.priceRange && filters.priceRange !== "all" && (
-                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                          💰 {filters.priceRange}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {!isLoading && facilities.length > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setFilters({ city: "", sportType: "", searchTerm: "", priceRange: "" })}
-                    className="border-gray-300 hover:bg-gray-50"
-                  >
-                    Clear All Filters
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Facilities Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

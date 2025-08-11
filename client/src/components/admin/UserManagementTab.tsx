@@ -104,7 +104,7 @@ export default function UserManagementTab({ users, isLoading }: UserManagementTa
             <Input
               placeholder="Search users by name, email, or username..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
               className="pl-10"
             />
           </div>

@@ -6,10 +6,28 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema } from "@shared/schema";
+import multer from "multer";
+import { imageUploadService } from "./imageUploadService";
 
 import Stripe from "stripe";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Check file type
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+});
 
 // Rate limiter for OTP requests: 2 requests per minute per IP
 const otpRateLimiter = rateLimit({
@@ -540,7 +558,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-    // Payment routes - Stripe integration
+    // Test endpoints to verify server is working
+  app.get("/api/test", (req, res) => {
+    res.json({ message: "Server is working", timestamp: new Date().toISOString() });
+  });
+
+  app.get("/api/test-auth", authenticateToken, (req: any, res) => {
+    res.json({ 
+      message: "Authentication working", 
+      user: req.user,
+      timestamp: new Date().toISOString() 
+    });
+  });
+
+  // Test file upload without authentication first
+  app.post("/api/test-upload", upload.single('image'), (req: any, res) => {
+    res.json({ 
+      message: "Upload test successful",
+      hasFile: !!req.file,
+      fileSize: req.file?.size,
+      fileType: req.file?.mimetype
+    });
+  });
+
+  // Test authentication with POST
+  app.post("/api/test-auth-post", authenticateToken, (req: any, res) => {
+    res.json({ 
+      message: "POST authentication working", 
+      user: req.user,
+      timestamp: new Date().toISOString() 
+    });
+  });
+
+  // Test image URL accessibility
+  app.get("/api/test-image/:filename", async (req: any, res) => {
+    try {
+      const { filename } = req.params;
+      const imageUrl = `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET_NAME || 'quickcourt-images'}/${filename}`;
+      
+      res.json({ 
+        message: "Image URL generated",
+        filename,
+        imageUrl,
+        bucketName: process.env.R2_BUCKET_NAME || 'quickcourt-images',
+        accountId: process.env.R2_ACCOUNT_ID
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to generate image URL", error: error.message });
+    }
+  });
+
+  // Image upload routes
+  app.post("/api/upload/image", authenticateToken, upload.single('image'), async (req: any, res) => {
+    // Handle multer errors
+    if (req.fileValidationError) {
+      return res.status(400).json({ message: req.fileValidationError });
+    }
+    try {
+      console.log('Image upload request received:', {
+        hasFile: !!req.file,
+        fileSize: req.file?.size,
+        fileType: req.file?.mimetype,
+        fileName: req.file?.originalname,
+        user: req.user
+      });
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      // Validate file
+      const validation = imageUploadService.validateFile(req.file);
+      if (!validation.valid) {
+        return res.status(400).json({ message: validation.error });
+      }
+
+      // Upload image
+      const uploadedImage = await imageUploadService.uploadImage(req.file, 'facilities');
+      
+      console.log('Image uploaded successfully:', uploadedImage);
+      
+      res.status(201).json({
+        message: "Image uploaded successfully",
+        image: uploadedImage
+      });
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      res.status(500).json({ 
+        message: "Failed to upload image", 
+        error: error.message 
+      });
+    }
+  });
+
+  app.delete("/api/upload/image/:filename", authenticateToken, async (req: any, res) => {
+    try {
+      const { filename } = req.params;
+      
+      // Extract filename from the full path if needed
+      const imageInfo = imageUploadService.getImageInfoFromUrl(filename);
+      const actualFilename = imageInfo ? imageInfo.filename : filename;
+      
+      const success = await imageUploadService.deleteImage(actualFilename);
+      
+      if (success) {
+        res.json({ message: "Image deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete image" });
+      }
+    } catch (error: any) {
+      console.error('Image deletion error:', error);
+      res.status(500).json({ 
+        message: "Failed to delete image", 
+        error: error.message 
+      });
+    }
+  });
+
+  // Payment routes - Stripe integration
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
   console.log('Stripe Config:', { 

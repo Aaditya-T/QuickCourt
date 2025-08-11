@@ -89,7 +89,7 @@ export class DatabaseStorage implements IStorage {
     let conditions = [eq(facilities.isActive, true)];
 
     if (filters?.city) {
-      conditions.push(like(facilities.city, `%${filters.city}%`));
+      conditions.push(like(facilities.city, `%${filters.city.toLowerCase()}%`));
     }
     if (filters?.sportType && filters.sportType !== "all" && filters.sportType !== "") {
       // Use SQL operator to check if the sport type is in the array
@@ -98,8 +98,8 @@ export class DatabaseStorage implements IStorage {
     if (filters?.searchTerm) {
       conditions.push(
         or(
-          like(facilities.name, `%${filters.searchTerm}%`),
-          like(facilities.description, `%${filters.searchTerm}%`)
+          like(facilities.name, `%${filters.searchTerm.toLowerCase()}%`),
+          like(facilities.description, `%${filters.searchTerm.toLowerCase()}%`)
         )!
       );
     }

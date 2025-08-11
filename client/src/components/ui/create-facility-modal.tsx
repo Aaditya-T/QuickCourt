@@ -91,7 +91,13 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
   };
 
   const handleFieldChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // setFormData(prev => ({ ...prev, [field]: value }));
+    //if field is name, change to lowercase
+    if (field === "name") {
+      setFormData(prev => ({ ...prev, [field]: value.toLowerCase() }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleSportTypeToggle = (sportType: string) => {

@@ -71,7 +71,6 @@ export default function AdminDashboard() {
   const { user, token } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [searchTerm, setSearchTerm] = useState("");
 
   // Fetch all users
   const { data: users = [], isLoading: usersLoading } = useQuery({
