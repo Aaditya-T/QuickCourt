@@ -79,7 +79,7 @@ export default function BookingModal({ facility, open, onClose, onBookingComplet
 
   const createBookingMutation = useMutation({
     mutationFn: async (bookingData: any) => {
-      return await apiRequest("POST", "/api/bookings", bookingData);
+      return await apiRequest("/api/bookings", "POST", bookingData);
     },
     onSuccess: () => {
       toast({

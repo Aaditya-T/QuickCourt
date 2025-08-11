@@ -53,7 +53,7 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
 
   const createFacilityMutation = useMutation({
     mutationFn: async (facilityData: any) => {
-      return await apiRequest("POST", "/api/facilities", facilityData);
+      return await apiRequest("/api/facilities", "POST", facilityData);
     },
     onSuccess: () => {
       toast({

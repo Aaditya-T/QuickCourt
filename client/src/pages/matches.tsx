@@ -82,7 +82,7 @@ export default function Matches() {
   // Join match mutation
   const joinMatchMutation = useMutation({
     mutationFn: async (matchId: string) => {
-      return await apiRequest("POST", `/api/matches/${matchId}/join`, {});
+      return await apiRequest(`/api/matches/${matchId}/join`, "POST", {});
     },
     onSuccess: () => {
       toast({

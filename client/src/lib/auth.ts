@@ -30,7 +30,7 @@ export const useAuthProvider = () => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await apiRequest("POST", "/api/auth/login", { email, password });
+      const response = await apiRequest("/api/auth/login", "POST", { email, password });
       const data = await response.json();
       
       setUser(data.user);
@@ -44,7 +44,7 @@ export const useAuthProvider = () => {
 
   const register = async (userData: RegisterData) => {
     try {
-      const response = await apiRequest("POST", "/api/auth/register", userData);
+      const response = await apiRequest("/api/auth/register", "POST", userData);
       const data = await response.json();
       
       setUser(data.user);

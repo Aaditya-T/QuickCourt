@@ -54,7 +54,7 @@ export default function CreateMatchModal({ open, onClose, onMatchCreated }: Crea
 
   const createMatchMutation = useMutation({
     mutationFn: async (matchData: any) => {
-      return await apiRequest("POST", "/api/matches", matchData);
+      return await apiRequest("/api/matches", "POST", matchData);
     },
     onSuccess: () => {
       toast({
