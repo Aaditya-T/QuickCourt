@@ -393,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               facilityId: facility.id,
               gameId: court.gameId,
               courtCount: court.courtCount,
-              pricePerHour: court.pricePerHour.toString(),
+              pricePerHour: court.pricePerHour,
             });
             await storage.createFacilityCourt(courtData);
           } catch (courtError) {

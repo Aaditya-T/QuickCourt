@@ -221,12 +221,18 @@ export const insertFacilitySchema = createInsertSchema(facilities).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  latitude: z.union([z.string(), z.number()]).transform((val) => String(val)).optional(),
+  longitude: z.union([z.string(), z.number()]).transform((val) => String(val)).optional(),
+  pricePerHour: z.union([z.string(), z.number()]).transform((val) => String(val)),
 });
 
 export const insertFacilityCourtSchema = createInsertSchema(facilityCourts).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  pricePerHour: z.union([z.string(), z.number()]).transform((val) => String(val)),
 });
 
 export const insertBookingSchema = createInsertSchema(bookings).omit({
