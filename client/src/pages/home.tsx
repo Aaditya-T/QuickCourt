@@ -168,7 +168,7 @@ export default function Home() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Player Role */}
             <Card className="text-center p-8">
               <CardContent className="pt-6">
@@ -209,28 +209,6 @@ export default function Home() {
                 </ul>
                 <Link href="/signup?role=facility_owner">
                   <Button>List Your Facility</Button>
-                </Link>
-              </CardContent>
-            </Card>
-            
-            {/* Admin Role */}
-            <Card className="text-center p-8">
-              <CardContent className="pt-6">
-                <img 
-                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300" 
-                  alt="Administrator working on analytics" 
-                  className="w-32 h-32 object-cover rounded-full mx-auto mb-6"
-                />
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">For Administrators</h3>
-                <ul className="text-gray-600 space-y-2 mb-6 text-left">
-                  <li>• Platform oversight & management</li>
-                  <li>• User & facility verification</li>
-                  <li>• Dispute resolution</li>
-                  <li>• Analytics & insights</li>
-                  <li>• System configuration</li>
-                </ul>
-                <Link href="/signup?role=admin">
-                  <Button>Admin Access</Button>
                 </Link>
               </CardContent>
             </Card>
