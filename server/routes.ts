@@ -845,7 +845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         date: new Date(date),
         startTime: new Date(startTime),
         endTime: new Date(endTime),
-        totalAmount,
+        totalAmount: totalAmount.toString(), // Convert to string for decimal field
         notes: notes || '',
         stripePaymentIntentId: paymentIntent.id,
         stripePaymentStatus: 'pending',
