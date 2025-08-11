@@ -56,6 +56,11 @@ function Router() {
           <AdminDashboard />
         </RouteGuard>
       </Route>
+      <Route path="/payment">
+        <RouteGuard allowedRoles={["user", "facility_owner", "admin"]}>
+          <StripePayment />
+        </RouteGuard>
+      </Route>
       <Route path="/stripe-payment">
         <RouteGuard allowedRoles={["user", "facility_owner", "admin"]}>
           <StripePayment />
