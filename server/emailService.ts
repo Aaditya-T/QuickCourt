@@ -22,7 +22,7 @@ export class EmailService {
 
     try {
       const result = await resend.emails.send({
-        from: 'QuickCourt <onboarding@resend.dev>',
+        from: 'QuickCourt <noreply@contact.blockcelerate.net>',
         to: [email],
         subject: subjects[type],
         html: `
