@@ -307,6 +307,7 @@ export class DatabaseStorage implements IStorage {
         user: {
           firstName: users.firstName,
           lastName: users.lastName,
+          profileImage: users.profileImage,
         },
       })
       .from(reviews)
@@ -329,7 +330,7 @@ export class DatabaseStorage implements IStorage {
 
     await db.update(facilities)
       .set({
-        rating: avgRating.toFixed(1),
+        rating: Number(avgRating).toFixed(1),
         totalReviews,
         updatedAt: new Date(),
       })

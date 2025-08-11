@@ -987,9 +987,17 @@ export default function Facility() {
                           <div key={review.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                  <User className="w-4 h-4 text-blue-600" />
-                                </div>
+                                {review.user?.profileImage ? (
+                                  <img
+                                    src={review.user.profileImage}
+                                    alt={`${review.user.firstName} ${review.user.lastName}`}
+                                    className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <User className="w-4 h-4 text-blue-600" />
+                                  </div>
+                                )}
                                 <div>
                                   <div className="font-medium text-gray-900">
                                     {review.user?.firstName} {review.user?.lastName}
