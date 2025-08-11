@@ -82,8 +82,8 @@ export default function Facilities() {
     // The query will automatically refetch due to the filters dependency
   };
 
-  const handleBookFacility = (facilityId: string) => {
-    setLocation(`/book/${facilityId}`);
+  const handleViewFacility = (facilityId: string) => {
+    setLocation(`/facilities/${facilityId}`);
   };
 
   if (error) {
@@ -268,7 +268,7 @@ export default function Facilities() {
               <EnhancedFacilityCard
                 key={facility.id}
                 facility={facility}
-                onBook={() => handleBookFacility(facility.id)}
+                onBook={() => handleViewFacility(facility.id)}
               />
             ))}
           </div>

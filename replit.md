@@ -49,11 +49,12 @@ Preferred communication style: Simple, everyday language.
 - **Middleware authentication**: Server-side token verification for API endpoints
 
 ### Key Features Architecture
-- **Booking System**: Time-slot based reservations with availability checking
+- **Booking System**: Time-slot based reservations with availability checking - streamlined flow through facility detail pages
 - **Match Organization**: Community-driven sports event creation and participation
 - **Search & Filtering**: Multi-criteria facility and match discovery
 - **Real-time Updates**: Optimistic updates with query invalidation
 - **Responsive Design**: Mobile-first approach with adaptive layouts
+- **Unified Booking Flow**: Facilities page links directly to facility detail page for viewing and booking
 
 ## External Dependencies
 

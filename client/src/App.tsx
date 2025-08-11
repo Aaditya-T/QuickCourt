@@ -18,7 +18,7 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
 import StripePayment from "@/pages/stripe-payment";
 import PaymentSuccess from "@/pages/payment-success";
-import BookFacility from "@/pages/book-facility";
+
 
 function Router() {
   return (
@@ -71,11 +71,7 @@ function Router() {
           <PaymentSuccess />
         </RouteGuard>
       </Route>
-      <Route path="/book/:facilityId">
-        <RouteGuard allowedRoles={["user", "admin"]}>
-          <BookFacility />
-        </RouteGuard>
-      </Route>
+
       <Route component={NotFound} />
     </Switch>
   );
