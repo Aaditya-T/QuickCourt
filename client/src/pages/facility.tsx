@@ -242,17 +242,20 @@ export default function Facility() {
     let closeTime = "23:00";
     let isOpen = true;
 
-    if (facility?.operatingHours) {
+    if (facility?.operatingHours && selectedDate) {
       try {
         const hours = JSON.parse(facility.operatingHours);
-        const today = new Date(selectedDate || new Date())
-          .toLocaleDateString("en", { weekday: "long" })
-          .toLowerCase()
-          .slice(0, 3);
-        const todayHours = hours[today] || hours.monday;
+        const dayOfWeek = selectedDate.toLocaleDateString("en", { weekday: "long" }).toLowerCase();
+        const todayHours = hours[dayOfWeek];
+
+        console.log("Operating hours check:", {
+          dayOfWeek,
+          todayHours,
+          rawHours: facility.operatingHours
+        });
 
         if (todayHours) {
-          if (todayHours.closed) {
+          if (todayHours.closed === true) {
             isOpen = false;
             openTime = "00:00";
             closeTime = "00:00";
@@ -267,6 +270,8 @@ export default function Facility() {
         isOpen = false;
       }
     }
+    
+    console.log("Final hours result:", { openLabel: openTime, closeLabel: closeTime, isOpen, selectedDate });
     return { openLabel: openTime, closeLabel: closeTime, isOpen };
   }, [facility?.operatingHours, selectedDate]);
 
@@ -276,10 +281,11 @@ export default function Facility() {
 
     try {
       const hours = JSON.parse(facility.operatingHours);
-      const dayOfWeek = date.toLocaleDateString("en", { weekday: "long" }).toLowerCase().slice(0, 3);
+      const dayOfWeek = date.toLocaleDateString("en", { weekday: "long" }).toLowerCase();
       const dayHours = hours[dayOfWeek] || hours.monday;
-      return dayHours?.closed || false;
+      return dayHours?.closed === true;
     } catch (error) {
+      console.error("Error checking if date is closed:", error);
       return false;
     }
   };
@@ -789,7 +795,20 @@ export default function Facility() {
                               today.setHours(0, 0, 0, 0);
                               const dateToCheck = new Date(date);
                               dateToCheck.setHours(0, 0, 0, 0);
-                              return dateToCheck < today || date > addHours(new Date(), 24 * 30) || isDateClosed(date);
+                              const isPastDate = dateToCheck < today;
+                              const isTooFarInFuture = date > addHours(new Date(), 24 * 30);
+                              const isClosed = isDateClosed(date);
+                              
+                              console.log("Calendar date check:", {
+                                date: date.toDateString(),
+                                dayOfWeek: date.toLocaleDateString("en", { weekday: "long" }).toLowerCase(),
+                                isPastDate,
+                                isTooFarInFuture,
+                                isClosed,
+                                shouldDisable: isPastDate || isTooFarInFuture || isClosed
+                              });
+                              
+                              return isPastDate || isTooFarInFuture || isClosed;
                             }}
                             className="mx-auto"
                             modifiers={{
