@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRoute, useLocation, Link } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import Navbar from "@/components/ui/navbar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Phone, Star, Clock, ShieldCheck, ChevronRight, Check } from "lucide-react";
-import { addHours, format, isAfter, isBefore, parse } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MapPin, Star, Clock, ShieldCheck, ChevronRight, Check, MessageSquare, User, Calendar as CalendarIcon, Trophy, Zap, Wifi, Car, Coffee, Users } from "lucide-react";
+import { addHours, format, isAfter, isBefore, parse, isToday, isBefore as isBeforeTime } from "date-fns";
 import { useAuth } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
+import { toast } from "@/hooks/use-toast";
 
 type Facility = {
   id: string;
@@ -44,6 +46,19 @@ type TimeSlot = {
   endDate: Date;
   available: boolean;
   totalPrice: number;
+  isPastSlot: boolean;
+};
+
+type Review = {
+  id: string;
+  userId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  user?: {
+    firstName: string;
+    lastName: string;
+  };
 };
 
 const sportTypeLabels: Record<string, string> = {
@@ -55,18 +70,40 @@ const sportTypeLabels: Record<string, string> = {
   squash: "Squash",
 };
 
+const sportIcons: Record<string, string> = {
+  badminton: "🏸",
+  tennis: "🎾",
+  basketball: "🏀",
+  football: "⚽",
+  table_tennis: "🏓",
+  squash: "🎯",
+};
+
+const amenityIcons: Record<string, any> = {
+  "WiFi": Wifi,
+  "Parking": Car,
+  "Cafeteria": Coffee,
+  "Changing Room": Users,
+  "Equipment Rental": Trophy,
+  "Air Conditioning": Zap,
+};
+
 export default function Facility() {
   const [, setLocation] = useLocation();
-  const [match, params] = useRoute("/facilities/:id");
+  const [, params] = useRoute("/facilities/:id");
   const facilityId = params?.id || "";
   const { token, user } = useAuth();
 
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [durationHours, setDurationHours] = useState<number>(1);
-  const minBookingHours = 1;
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  
+  // Review states
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState<string>("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
+  const [showReviewDialog, setShowReviewDialog] = useState<boolean>(false);
 
   // Facility details
   const { data: facility, isLoading: isFacilityLoading } = useQuery<Facility | null>({
@@ -91,6 +128,43 @@ export default function Facility() {
       );
       if (!res.ok) throw new Error("Failed to fetch bookings");
       return res.json();
+    },
+  });
+
+  // Reviews
+  const { data: reviews = [], refetch: refetchReviews } = useQuery<Review[]>({
+    queryKey: ["/api/facilities", facilityId, "reviews"],
+    enabled: !!facilityId,
+    queryFn: async () => {
+      const res = await fetch(`/api/facilities/${facilityId}/reviews`);
+      if (!res.ok) throw new Error("Failed to fetch reviews");
+      return res.json();
+    },
+  });
+
+  // Submit review mutation
+  const submitReviewMutation = useMutation({
+    mutationFn: async (reviewData: { rating: number; comment: string }) => {
+      const res = await apiRequest(`/api/facilities/${facilityId}/reviews`, "POST", reviewData);
+      if (!res.ok) throw new Error("Failed to submit review");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Review submitted",
+        description: "Thank you for your feedback!",
+      });
+      setReviewRating(5);
+      setReviewComment("");
+      setShowReviewDialog(false);
+      refetchReviews();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to submit review. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -121,17 +195,18 @@ export default function Facility() {
   }, [facility?.operatingHours, selectedDate]);
 
   const timeSlots: TimeSlot[] = useMemo(() => {
-    if (!facility || !selectedDate) return [];
+    if (!facility || !selectedDate || !selectedSport) return [];
     const slots: TimeSlot[] = [];
-    const pricePerHour = parseFloat(facility.pricePerHour);
+    const pricePerHour = parseFloat(facility.pricePerHour); // This will be sport-specific in the future
 
     const dayOpen = parse(openLabel, "HH:mm", selectedDate);
     const dayClose = parse(closeLabel, "HH:mm", selectedDate);
+    const now = new Date();
 
-    // generate in 1-hour increments, but the window length equals durationHours
+    // generate in 1-hour increments
     let current = dayOpen;
     while (isBefore(current, dayClose)) {
-      const endWindow = addHours(current, durationHours);
+      const endWindow = addHours(current, 1); // Fixed 1-hour slots
       if (isAfter(endWindow, dayClose)) break;
 
       const isBooked = existingBookings.some((booking) => {
@@ -144,18 +219,22 @@ export default function Facility() {
         );
       });
 
+      // Check if slot is in the past (for today only)
+      const isPastSlot = isToday(selectedDate) && isBeforeTime(current, now);
+
       slots.push({
         startTimeLabel: format(current, "HH:mm"),
         startDate: current,
         endDate: endWindow,
-        available: !isBooked,
-        totalPrice: pricePerHour * durationHours,
+        available: !isBooked && !isPastSlot,
+        totalPrice: pricePerHour, // Fixed price per hour
+        isPastSlot,
       });
 
       current = addHours(current, 1);
     }
     return slots;
-  }, [facility, selectedDate, existingBookings, durationHours, openLabel, closeLabel]);
+  }, [facility, selectedDate, existingBookings, selectedSport, openLabel, closeLabel]);
 
   const toggleSlot = (slot: TimeSlot) => {
     setSelectedSlots((prev) => {
@@ -220,6 +299,30 @@ export default function Facility() {
     }
   };
 
+  const handleSubmitReview = async () => {
+    if (!user) {
+      setLocation("/login");
+      return;
+    }
+    if (!reviewComment.trim()) {
+      toast({
+        title: "Error",
+        description: "Please write a comment for your review.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsSubmittingReview(true);
+    try {
+      await submitReviewMutation.mutateAsync({
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+      });
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   const defaultImages = [
     "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1200&q=60",
     "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=60",
@@ -227,239 +330,441 @@ export default function Facility() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <Navbar />
 
       {isFacilityLoading || !facility ? (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Skeleton className="h-72 w-full mb-6" />
-          <Card>
-            <CardContent className="pt-6"><Skeleton className="h-6 w-1/2 mb-4" /><Skeleton className="h-4 w-1/3" /></CardContent>
-          </Card>
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <Skeleton className="h-64 w-full mb-6 rounded-2xl" />
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-3">
+              <Skeleton className="h-96 w-full rounded-xl" />
+            </div>
+            <div>
+              <Skeleton className="h-96 w-full rounded-xl" />
+            </div>
+          </div>
         </div>
       ) : (
         <>
-          {/* Hero carousel */}
-          <div className="bg-white border-b">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
+          {/* Compact Hero Section */}
+          <div className="bg-white shadow-sm border-b">
+            <div className="max-w-7xl mx-auto px-6 py-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
                   <Carousel className="w-full">
                     <CarouselContent>
                       {(facility.images?.length ? facility.images : defaultImages).map((img, idx) => (
                         <CarouselItem key={idx}>
-                          <img src={img} alt={`Image ${idx + 1}`} className="w-full h-72 object-cover rounded-lg" />
+                          <div className="relative">
+                            <img 
+                              src={img} 
+                              alt={`${facility.name} - Image ${idx + 1}`} 
+                              className="w-full h-64 object-cover rounded-xl shadow-lg" 
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-xl" />
+                          </div>
                         </CarouselItem>
                       ))}
                     </CarouselContent>
-                    <CarouselPrevious />
-                    <CarouselNext />
+                    <CarouselPrevious className="left-2" />
+                    <CarouselNext className="right-2" />
                   </Carousel>
                 </div>
+                
                 <div className="space-y-4">
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">{facility.name}</h1>
-                    <div className="flex items-center text-gray-600 mt-1">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="ml-1 text-sm">{facility.rating} ({facility.totalReviews} reviews)</span>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{facility.name}</h1>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center bg-yellow-100 px-2 py-1 rounded-full">
+                        <Star className="w-4 h-4 text-yellow-500 fill-current mr-1" />
+                        <span className="text-sm font-semibold text-yellow-700">{facility.rating}</span>
+                      </div>
+                      <span className="text-sm text-gray-600">({facility.totalReviews} reviews)</span>
                     </div>
                   </div>
-                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700">Book This Venue</Button>
-                  <div className="text-sm text-gray-700 space-y-2">
-                    <div className="flex items-start">
-                      <MapPin className="w-4 h-4 mr-2 mt-0.5" />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
+                      <MapPin className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                       <div>
-                        <div>{facility.address}</div>
-                        <div>{facility.city}, {facility.state} {facility.zipCode}</div>
-                        <a
-                          className="text-primary inline-flex items-center mt-1"
-                          target="_blank"
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${facility.address}, ${facility.city}, ${facility.state} ${facility.zipCode}`)}`}
-                          rel="noreferrer"
-                        >
-                          View on map <ChevronRight className="w-4 h-4 ml-1" />
-                        </a>
+                        <div className="font-medium text-gray-900">{facility.address}</div>
+                        <div className="text-gray-600">{facility.city}, {facility.state}</div>
                       </div>
                     </div>
-                    <div className="flex items-center">
-                      <Phone className="w-4 h-4 mr-2" />
-                      <span>Contact: Not provided</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Clock className="w-4 h-4 mr-2" />
-                      <span>Today: {openLabel} - {closeLabel}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <ShieldCheck className="w-4 h-4 mr-2" />
-                      <span>Minimum booking time: {minBookingHours} hour</span>
+
+                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                      <Clock className="w-4 h-4 text-green-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Open Today</div>
+                        <div className="text-gray-600">{openLabel} - {closeLabel}</div>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Amenities */}
+                  {facility.amenities?.length > 0 && (
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700 mb-2">Amenities</div>
+                      <div className="flex flex-wrap gap-2">
+                        {facility.amenities.slice(0, 6).map((amenity) => {
+                          const IconComponent = amenityIcons[amenity] || Zap;
+                          return (
+                            <div key={amenity} className="flex items-center gap-1 text-xs text-gray-600 bg-gray-100 rounded-full px-2 py-1">
+                              <IconComponent className="w-3 h-3" />
+                              <span>{amenity}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Booking section */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Facility Description */}
+          {facility.description && (
+            <div className="max-w-7xl mx-auto px-6 py-4">
+              <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-3">About This Facility</h2>
+                  <p className="text-gray-700 leading-relaxed">{facility.description}</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Main Booking Interface - Compact Layout */}
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              
+              {/* Left Panel - Booking Controls */}
+              <div className="lg:col-span-3">
+                <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      
+                      {/* Sports Selection */}
                       <div>
-                        <Label className="mb-2 block">Sports Available</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {facility.sportTypes.map((sport) => (
-                            <Badge
-                              key={sport}
-                              variant={selectedSport === sport ? "default" : "outline"}
-                              className={`cursor-pointer px-3 py-1 ${selectedSport === sport ? "bg-primary text-white" : ""}`}
-                              onClick={() => setSelectedSport(sport)}
-                            >
-                              {sportTypeLabels[sport] || sport}
-                            </Badge>
-                          ))}
+                        <Label className="text-sm font-bold text-gray-800 mb-3 block flex items-center gap-2">
+                          <Trophy className="w-4 h-4 text-blue-600" />
+                          Choose Sport
+                        </Label>
+                        <div className="space-y-2">
+                          {facility.sportTypes.map((sport) => {
+                            const isSelected = selectedSport === sport;
+                            const basePrice = parseFloat(facility.pricePerHour);
+                            
+                            return (
+                              <div
+                                key={sport}
+                                onClick={() => setSelectedSport(sport)}
+                                className={`cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 ${
+                                  isSelected 
+                                    ? "border-blue-500 bg-blue-50 shadow-md" 
+                                    : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xl">{sportIcons[sport]}</span>
+                                    <span className="font-medium text-gray-900 text-sm">
+                                      {sportTypeLabels[sport] || sport}
+                                    </span>
+                                  </div>
+                                  <span className="text-sm font-bold text-blue-600">₹{basePrice}/hr</span>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                        <div className="mt-3 text-xs text-gray-500">Click a sport to view pricing.</div>
                       </div>
+
+                      {/* Date Selection */}
                       <div>
-                        <Label className="mb-2 block">Date</Label>
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={setSelectedDate}
-                          disabled={(date) => date < new Date() || date > addHours(new Date(), 24 * 30)}
-                          className="rounded-md border"
-                        />
-                      </div>
-                      <div>
-                        <Label className="mb-2 block">Duration</Label>
-                        <Select
-                          value={String(durationHours)}
-                          onValueChange={(v) => setDurationHours(parseInt(v, 10))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select duration" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">1 hour</SelectItem>
-                            <SelectItem value="2">2 hours</SelectItem>
-                            <SelectItem value="3">3 hours</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <div className="text-sm text-gray-500 mt-2 flex flex-col gap-1">
-                          <div className="font-medium">Pricing</div>
-                          <div className="text-xs">Base: ₹{parseFloat(facility.pricePerHour)}/hr</div>
-                          <div className="text-xs">Weekend: +20% | Peak (6–9 PM): +30%</div>
+                        <Label className="text-sm font-bold text-gray-800 mb-3 block flex items-center gap-2">
+                          <CalendarIcon className="w-4 h-4 text-green-600" />
+                          Select Date
+                        </Label>
+                        <div className="bg-white rounded-lg border-2 border-gray-200 p-3 flex justify-center">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            disabled={(date) => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              const dateToCheck = new Date(date);
+                              dateToCheck.setHours(0, 0, 0, 0);
+                              return dateToCheck < today || date > addHours(new Date(), 24 * 30);
+                            }}
+                            className="mx-auto"
+                          />
                         </div>
+                        {selectedDate && (
+                          <div className="mt-2 text-center text-sm text-blue-600 font-medium">
+                            📅 {format(selectedDate, "EEEE, MMM dd, yyyy")}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Time Slots */}
+                      <div>
+                        <Label className="text-sm font-bold text-gray-800 mb-3 block flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-purple-600" />
+                          Available Slots
+                        </Label>
+                        {!selectedSport ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <Trophy className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                            <p className="text-sm">Select a sport first</p>
+                          </div>
+                        ) : isBookingsLoading ? (
+                          <div className="space-y-2">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                              <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                            ))}
+                          </div>
+                        ) : timeSlots.length === 0 ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                            <p className="text-sm">No slots available</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-80 overflow-y-auto">
+                            {timeSlots.filter(slot => slot.available).map((slot, idx) => {
+                              const isSelected = selectedSlots.some((s) => s.startDate.getTime() === slot.startDate.getTime());
+                              
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => toggleSlot(slot)}
+                                  className={`w-full flex items-center justify-between p-3 border-2 rounded-lg text-left transition-all duration-200 ${
+                                    isSelected
+                                      ? "border-blue-500 bg-blue-50 shadow-md"
+                                      : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                                      isSelected
+                                        ? "bg-blue-500 border-blue-500"
+                                        : "border-gray-300 bg-white"
+                                    }`}>
+                                      {isSelected && <Check className="h-3 w-3 text-white" />}
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-medium text-gray-900">
+                                        {slot.startTimeLabel} - {format(slot.endDate, "HH:mm")}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-sm font-bold text-gray-900">₹{slot.totalPrice}</div>
+                                </button>
+                              );
+                            })}
+                            {timeSlots.filter(slot => slot.available).length === 0 && (
+                              <div className="text-center py-8 text-gray-500">
+                                <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                <p className="text-sm">No available slots for this date</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Available Time Slots</h3>
-                      {selectedDate && (
-                        <div className="text-sm text-gray-500">for {format(selectedDate, "MMM dd, yyyy")}</div>
-                      )}
-                    </div>
-                    {isBookingsLoading ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                          <Skeleton key={i} className="h-12 w-full" />
-                        ))}
-                      </div>
-                    ) : timeSlots.length === 0 ? (
-                      <div className="text-center text-gray-500 py-10">No slots available for this date</div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {timeSlots.map((slot, idx) => {
-                          // Apply dynamic pricing multipliers: weekend + peak hours
-                          const day = (selectedDate ?? new Date()).getDay();
-                          const isWeekend = day === 0 || day === 6;
-                          const startHour = slot.startDate.getHours();
-                          const isPeak = startHour >= 18 && startHour < 21;
-                          let price = slot.totalPrice;
-                          if (isWeekend) price *= 1.2;
-                          if (isPeak) price *= 1.3;
-                          price = Math.round(price);
-                          const formattedPrice = `₹${price}`;
-                          return (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => slot.available && toggleSlot(slot)}
-                            className={`flex items-center justify-between p-3 border rounded-lg text-left transition ${
-                              !slot.available
-                                ? "bg-gray-50 opacity-60 cursor-not-allowed"
-                                : selectedSlots.some((s) => s.startDate.getTime() === slot.startDate.getTime())
-                                ? "border-primary bg-primary/5"
-                                : "hover:border-primary"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`h-5 w-5 rounded border flex items-center justify-center ${
-                                selectedSlots.some((s) => s.startDate.getTime() === slot.startDate.getTime())
-                                  ? "bg-primary text-white border-primary"
-                                  : "bg-white"
-                              }`}>
-                                {selectedSlots.some((s) => s.startDate.getTime() === slot.startDate.getTime()) && (
-                                  <Check className="h-4 w-4" />
-                                )}
+                {/* Reviews Section - Compact */}
+                <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm mt-6">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-green-600" />
+                        Reviews ({reviews.length})
+                      </CardTitle>
+                      {user && (
+                        <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="border-blue-300 text-blue-600 hover:bg-blue-50">
+                              Write Review
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Write a Review</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Rating</Label>
+                                <div className="flex gap-1">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                      key={star}
+                                      type="button"
+                                      onClick={() => setReviewRating(star)}
+                                      className={`text-2xl ${
+                                        star <= reviewRating ? "text-yellow-400" : "text-gray-300"
+                                      }`}
+                                    >
+                                      ★
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                               <div>
-                                <div className="text-sm font-medium">
-                                  {slot.startTimeLabel} - {format(slot.endDate, "HH:mm")}
-                                </div>
-                                <div className="text-xs text-gray-500">{slot.available ? "Available" : "Booked"}</div>
+                                <Label className="text-sm font-medium mb-2 block">Comment</Label>
+                                <Textarea
+                                  placeholder="Share your experience..."
+                                  value={reviewComment}
+                                  onChange={(e) => setReviewComment(e.target.value)}
+                                  rows={4}
+                                />
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setShowReviewDialog(false)}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  onClick={handleSubmitReview}
+                                  disabled={isSubmittingReview || !reviewComment.trim()}
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                  {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                                </Button>
                               </div>
                             </div>
-                            <div className="text-sm font-semibold">{formattedPrice}</div>
-                          </button>
-                          );
-                        })}
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    {reviews.length === 0 ? (
+                      <div className="text-center py-6 text-gray-500">
+                        <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                        <p className="text-sm">No reviews yet. Be the first to review!</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {reviews.slice(0, 3).map((review) => (
+                          <div key={review.id} className="p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <User className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-gray-900 text-sm">
+                                    {review.user ? `${review.user.firstName} ${review.user.lastName}` : "Anonymous"}
+                                  </span>
+                                  <div className="flex">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`w-3 h-3 ${
+                                          star <= review.rating ? "text-yellow-400 fill-current" : "text-gray-300"
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <p className="text-gray-700 text-sm">{review.comment}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {reviews.length > 3 && (
+                          <div className="text-center">
+                            <Button variant="outline" size="sm">
+                              View All Reviews
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Sidebar: summary */}
-              <div className="space-y-6">
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <h3 className="text-lg font-semibold">Booking Summary</h3>
-                    <div className="text-sm text-gray-700 space-y-2">
-                      <div className="flex justify-between"><span>Sport</span><span>{selectedSport ? (sportTypeLabels[selectedSport] || selectedSport) : "-"}</span></div>
-                      <div className="flex justify-between"><span>Date</span><span>{selectedDate ? format(selectedDate, "MMM dd, yyyy") : "-"}</span></div>
-                      <div className="flex justify-between"><span>Per-slot duration</span><span>{durationHours} hr</span></div>
-                      <div className="flex justify-between"><span>Selected slots</span><span>{selectedSlots.length}</span></div>
-                      <div className="flex justify-between font-semibold border-t pt-2"><span>Rate</span><span>₹{parseFloat(facility.pricePerHour)}/hr</span></div>
-                      <div className="flex justify-between font-semibold"><span>Minimum</span><span>{minBookingHours} hour</span></div>
-                      <div className="flex justify-between text-base font-semibold"><span>Total</span><span>₹{totalSelectedAmount}</span></div>
-                      <div className="text-xs text-gray-500">Dynamic pricing is applied per slot (weekends/peak). Final total recalculates at checkout.</div>
+              {/* Right Sidebar - Booking Summary (Static) */}
+              <div className="lg:col-span-1">
+                <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-blue-50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-bold text-gray-900">Booking Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-sm space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Sport:</span>
+                        <span className="font-semibold">
+                          {selectedSport ? `${sportIcons[selectedSport]} ${sportTypeLabels[selectedSport]}` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Date:</span>
+                        <span className="font-semibold">
+                          {selectedDate ? format(selectedDate, "MMM dd") : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Selected slots:</span>
+                        <span className="font-semibold text-blue-600">{selectedSlots.length}</span>
+                      </div>
+                      
+                      {selectedSlots.length > 0 && (
+                        <div className="border-t pt-3 space-y-2">
+                          <div className="text-xs text-gray-500 mb-2">Time slots:</div>
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {selectedSlots.map((slot, idx) => (
+                              <div key={idx} className="flex justify-between text-xs bg-blue-50 p-2 rounded">
+                                <span>{slot.startTimeLabel} - {format(slot.endDate, "HH:mm")}</span>
+                                <span className="font-semibold">₹{slot.totalPrice}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="border-t pt-3">
+                        <div className="flex justify-between items-center text-base">
+                          <span className="font-semibold text-gray-900">Total:</span>
+                          <span className="font-bold text-xl text-blue-600">₹{totalSelectedAmount}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">Select multiple slots, then proceed to checkout.</div>
-                    <Button className="w-full" disabled={selectedSlots.length === 0 || isProcessing} onClick={proceedToCheckout}>
-                      {isProcessing ? "Processing..." : `Proceed to Checkout (${selectedSlots.length} slot${selectedSlots.length === 1 ? "" : "s"})`}
+                    
+                    <Button 
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg" 
+                      disabled={selectedSlots.length === 0 || isProcessing} 
+                      onClick={proceedToCheckout}
+                    >
+                      {isProcessing ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Processing...
+                        </div>
+                      ) : selectedSlots.length === 0 ? (
+                        "Select Time Slots"
+                      ) : (
+                        `Book Now - ₹${totalSelectedAmount}`
+                      )}
                     </Button>
+                    
+                    {selectedSlots.length === 0 && (
+                      <p className="text-xs text-gray-500 text-center">
+                        Select time slots to proceed
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
-
-                {facility.amenities?.length ? (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <h3 className="text-lg font-semibold mb-3">Amenities</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {facility.amenities.map((a) => (
-                          <Badge key={a} variant="outline">{a}</Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : null}
               </div>
             </div>
           </div>
@@ -468,5 +773,3 @@ export default function Facility() {
     </div>
   );
 }
-
-
