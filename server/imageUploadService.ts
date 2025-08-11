@@ -11,7 +11,7 @@ const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'quickcourt-images';
 
 // Use public R2 URL - this should be configured for public access in Cloudflare
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 
-  `https://pub-${R2_ACCOUNT_ID?.replace(/-/g, '')}.r2.dev`;
+  'https://pub-02f6c390de2f4928874315ec20ca20ec.r2.dev';
 
 console.log('R2 Configuration:', {
   bucketName: R2_BUCKET_NAME,
