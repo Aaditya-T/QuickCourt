@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   BasicInformation,
   Location,
@@ -13,13 +13,14 @@ import {
   FormActions
 } from "./facility-form";
 
-interface CreateFacilityModalProps {
+interface EditFacilityModalProps {
   open: boolean;
   onClose: () => void;
-  onFacilityCreated?: () => void;
+  facility: any;
+  onFacilityUpdated?: () => void;
 }
 
-export default function CreateFacilityModal({ open, onClose, onFacilityCreated }: CreateFacilityModalProps) {
+export default function EditFacilityModal({ open, onClose, facility, onFacilityUpdated }: EditFacilityModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -33,62 +34,78 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
     pricePerHour: "",
     images: [] as string[],
     amenities: [] as string[],
-    operatingHours: JSON.stringify({
-      monday: { open: "06:00", close: "23:00" },
-      tuesday: { open: "06:00", close: "23:00" },
-      wednesday: { open: "06:00", close: "23:00" },
-      thursday: { open: "06:00", close: "23:00" },
-      friday: { open: "06:00", close: "23:00" },
-      saturday: { open: "08:00", close: "22:00" },
-      sunday: { closed: true },
-    }),
+    operatingHours: "",
   });
 
-  const createFacilityMutation = useMutation({
+  // Initialize form data when facility changes
+  useEffect(() => {
+    if (facility) {
+      // Ensure operatingHours is valid JSON
+      let validOperatingHours = facility.operatingHours;
+      try {
+        if (validOperatingHours) {
+          JSON.parse(validOperatingHours);
+        } else {
+          validOperatingHours = JSON.stringify({
+            monday: { open: "06:00", close: "23:00" },
+            tuesday: { open: "06:00", close: "23:00" },
+            wednesday: { open: "06:00", close: "23:00" },
+            thursday: { open: "06:00", close: "23:00" },
+            friday: { open: "06:00", close: "23:00" },
+            saturday: { open: "08:00", close: "22:00" },
+            sunday: { closed: true },
+          });
+        }
+      } catch (error) {
+        // If parsing fails, use default hours
+        validOperatingHours = JSON.stringify({
+          monday: { open: "06:00", close: "23:00" },
+          tuesday: { open: "06:00", close: "23:00" },
+          wednesday: { open: "06:00", close: "23:00" },
+          thursday: { open: "06:00", close: "23:00" },
+          friday: { open: "06:00", close: "23:00" },
+          saturday: { open: "08:00", close: "22:00" },
+          sunday: { closed: true },
+        });
+      }
+
+      setFormData({
+        name: facility.name || "",
+        description: facility.description || "",
+        address: facility.address || "",
+        city: facility.city || "",
+        state: facility.state || "",
+        zipCode: facility.zipCode || "",
+        sportTypes: facility.sportTypes || [],
+        pricePerHour: facility.pricePerHour?.toString() || "",
+        images: facility.images || [],
+        amenities: facility.amenities || [],
+        operatingHours: validOperatingHours,
+      });
+    }
+  }, [facility]);
+
+  const updateFacilityMutation = useMutation({
     mutationFn: async (facilityData: any) => {
-      return await apiRequest("/api/facilities", "POST", facilityData);
+      return await apiRequest(`/api/facilities/${facility.id}`, "PUT", facilityData);
     },
     onSuccess: () => {
       toast({
-        title: "Facility Created",
-        description: "Your facility has been successfully added to the platform.",
+        title: "Facility Updated",
+        description: "Your facility has been successfully updated.",
       });
-      onFacilityCreated?.();
+      onFacilityUpdated?.();
       onClose();
-      resetForm();
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
     },
     onError: (error: any) => {
       toast({
-        title: "Creation Failed",
-        description: error.message || "Failed to create facility. Please try again.",
+        title: "Update Failed",
+        description: error.message || "Failed to update facility. Please try again.",
         variant: "destructive",
       });
     },
   });
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      sportTypes: [],
-      pricePerHour: "",
-      images: [],
-      amenities: [],
-      operatingHours: JSON.stringify({
-        monday: { open: "06:00", close: "23:00" },
-        tuesday: { open: "06:00", close: "23:00" },
-        wednesday: { open: "06:00", close: "23:00" },
-        thursday: { open: "06:00", close: "23:00" },
-        friday: { open: "06:00", close: "23:00" },
-        saturday: { open: "08:00", close: "22:00" },
-        sunday: { closed: true },
-      }),
-    });
-  };
 
   const handleFieldChange = (field: string, value: string) => {
     // setFormData(prev => ({ ...prev, [field]: value }));
@@ -127,7 +144,7 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
     if (!user || user.role !== "facility_owner") {
       toast({
         title: "Permission Denied",
-        description: "You must be a facility owner to create facilities.",
+        description: "You must be a facility owner to edit facilities.",
         variant: "destructive",
       });
       return;
@@ -170,14 +187,14 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
       ownerId: user.id,
     };
 
-    createFacilityMutation.mutate(facilityData);
+    updateFacilityMutation.mutate(facilityData);
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl w-[95vw] sm:w-auto max-h-[85vh] sm:max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
         <DialogHeader>
-          <DialogTitle>Add New Facility</DialogTitle>
+          <DialogTitle>Edit Facility</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -219,8 +236,8 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
 
           <FormActions
             onCancel={onClose}
-            submitText="Create Facility"
-            isSubmitting={createFacilityMutation.isPending}
+            submitText="Update Facility"
+            isSubmitting={updateFacilityMutation.isPending}
           />
         </form>
       </DialogContent>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import Navbar from "@/components/ui/navbar";
@@ -8,12 +8,21 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -31,13 +40,37 @@ import {
   XCircle,
   Eye,
   Edit,
-  Ban
+  Ban,
+  Zap,
+  LayoutDashboard,
+  Download,
+  BarChart3,
+  UserCheck,
+  Flag,
+  User,
+  LogOut,
+  Clock,
+  MapPin,
+  Phone,
+  FileText,
+  MessageCircle,
+  Check,
+  X,
+  UserX,
+  MessageSquare,
+  RefreshCw,
+  PieChart
 } from "lucide-react";
+import AdminCharts from "@/components/admin/AdminCharts";
+import FacilityApprovalTab from "@/components/admin/FacilityApprovalTab";
+import OwnerApprovalTab from "@/components/admin/OwnerApprovalTab";
+import UserManagementTab from "@/components/admin/UserManagementTab";
+import ReportsTab from "@/components/admin/ReportsTab";
 
 export default function AdminDashboard() {
   const { user, token } = useAuth();
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   // Fetch all users
   const { data: users = [], isLoading: usersLoading } = useQuery({
@@ -45,8 +78,31 @@ export default function AdminDashboard() {
     enabled: !!user && !!token && user.role === "admin",
     queryFn: async () => {
       // This would require admin-only endpoints
-      // For now, return empty array as placeholder
-      return [];
+      // For now, return mock data as placeholder
+      return [
+        {
+          id: 1,
+          firstName: "Alice",
+          lastName: "Johnson",
+          email: "alice@example.com",
+          username: "alice_j",
+          role: "user",
+          isActive: true,
+          createdAt: "2024-01-10",
+          lastActive: "2024-01-20"
+        },
+        {
+          id: 2,
+          firstName: "Bob",
+          lastName: "Smith",
+          email: "bob@example.com",
+          username: "bob_smith",
+          role: "facility_owner",
+          isActive: true,
+          createdAt: "2024-01-05",
+          lastActive: "2024-01-19"
+        }
+      ];
     },
   });
 
@@ -71,8 +127,18 @@ export default function AdminDashboard() {
     enabled: !!user && !!token && user.role === "admin",
     queryFn: async () => {
       // This would require admin-only endpoints
-      // For now, return empty array as placeholder
-      return [];
+      // For now, return mock data as placeholder
+      return [
+        {
+          id: 1,
+          facilityId: 1,
+          userId: 1,
+          date: "2024-01-20",
+          totalAmount: 800,
+          status: "confirmed",
+          createdAt: "2024-01-18"
+        }
+      ];
     },
   });
 
@@ -124,117 +190,188 @@ export default function AdminDashboard() {
            bookingDate.getFullYear() === now.getFullYear();
   }).length;
 
-  const filteredUsers = users.filter((user: any) =>
-    user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredFacilities = facilities.filter((facility: any) =>
-    facility.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    facility.city?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      
+      {/* Navigation */}
+      <nav className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <h1 className="text-xl font-bold flex items-center bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
+                  <Zap className="w-6 h-6 mr-2 text-blue-600" />
+                  QuickCourt
+                </h1>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                <Shield className="w-3 h-3 mr-1" />
+                Administrator
+              </Badge>
+              <Button variant="ghost" size="sm">
+                <LogOut className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Admin Dashboard
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+                <LayoutDashboard className="w-8 h-8 mr-3 text-blue-600" />
+                Sports Admin Dashboard
               </h1>
-              <p className="text-gray-600 mt-2">
-                Platform oversight and management tools
-              </p>
+              <p className="text-gray-600 mt-2">Manage facilities, users, and platform analytics</p>
             </div>
-            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-              <Shield className="w-4 h-4 mr-1" />
-              Administrator
-            </Badge>
+            <div className="flex items-center space-x-3">
+              <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
+                <Download className="w-4 h-4 mr-2" />
+                Export Data
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalUsers}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Building className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Facilities</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {activeFacilities}/{totalFacilities}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Calendar className="w-6 h-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalBookings}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-orange-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">This Month</p>
-                  <p className="text-2xl font-bold text-gray-900">{thisMonthBookings}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="facilities">Facilities</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="matches">Matches</TabsTrigger>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid grid-cols-7 gap-0 bg-white border border-gray-200 p-0 h-auto">
+            <TabsTrigger 
+              value="dashboard" 
+              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+            >
+              <BarChart3 className="w-4 h-4 mb-1" />
+              <span className="hidden sm:inline">Dashboard</span>
+              <span className="sm:hidden">Home</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="facility-approval"
+              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+            >
+              <Building className="w-4 h-4 mb-1" />
+              <span className="hidden sm:inline">Facility Approval</span>
+              <span className="sm:hidden">Facilities</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="owner-approval"
+              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+            >
+              <UserCheck className="w-4 h-4 mb-1" />
+              <span className="hidden sm:inline">Owner Approval</span>
+              <span className="sm:hidden">Owners</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="user-management"
+              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+            >
+              <Users className="w-4 h-4 mb-1" />
+              <span className="hidden sm:inline">User Management</span>
+              <span className="sm:hidden">Users</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="reports"
+              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+            >
+              <Flag className="w-4 h-4 mb-1" />
+              <span className="hidden sm:inline">Reports & Moderation</span>
+              <span className="sm:hidden">Reports</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="analytics"
+              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+            >
+              <TrendingUp className="w-4 h-4 mb-1" />
+              <span className="hidden sm:inline">Analytics</span>
+              <span className="sm:hidden">Stats</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="profile"
+              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+            >
+              <User className="w-4 h-4 mb-1" />
+              <span className="hidden sm:inline">Profile</span>
+              <span className="sm:hidden">Me</span>
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Activity */}
+          <TabsContent value="dashboard">
+            {/* Global Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <Card className="bg-white border shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="p-3 bg-blue-100 rounded-lg">
+                        <Users className="w-6 h-6 text-blue-600" />
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                      <dd className="text-2xl font-bold text-gray-900">1,247</dd>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="p-3 bg-green-100 rounded-lg">
+                        <Building className="w-6 h-6 text-green-600" />
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dt className="text-sm font-medium text-gray-500 truncate">Facility Owners</dt>
+                      <dd className="text-2xl font-bold text-gray-900">89</dd>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="p-3 bg-purple-100 rounded-lg">
+                        <Calendar className="w-6 h-6 text-purple-600" />
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Bookings</dt>
+                      <dd className="text-2xl font-bold text-gray-900">3,456</dd>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="p-3 bg-orange-100 rounded-lg">
+                        <TrendingUp className="w-6 h-6 text-orange-600" />
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dt className="text-sm font-medium text-gray-500 truncate">Active Courts</dt>
+                      <dd className="text-2xl font-bold text-gray-900">156</dd>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <AdminCharts />
+
+            {/* Recent Activity & System Health */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
               <Card>
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
@@ -260,7 +397,6 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
 
-              {/* System Health */}
               <Card>
                 <CardHeader>
                   <CardTitle>System Health</CardTitle>
@@ -294,320 +430,140 @@ export default function AdminDashboard() {
             </div>
           </TabsContent>
 
-          <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  User Management
-                  <div className="flex items-center space-x-2">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        placeholder="Search users..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-64"
-                      />
+          <TabsContent value="facility-approval">
+            <FacilityApprovalTab />
+          </TabsContent>
+
+          <TabsContent value="owner-approval">
+            <OwnerApprovalTab />
+          </TabsContent>
+
+          <TabsContent value="user-management">
+            <UserManagementTab users={users} isLoading={usersLoading} />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <ReportsTab />
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6">Platform Analytics</h3>
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 bg-blue-50 rounded-lg">
+                          <p className="text-2xl font-bold text-blue-600">92%</p>
+                          <p className="text-sm text-gray-600">User Satisfaction</p>
+                        </div>
+                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                          <p className="text-2xl font-bold text-green-600">87%</p>
+                          <p className="text-sm text-gray-600">Facility Approval Rate</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 bg-purple-50 rounded-lg">
+                          <p className="text-2xl font-bold text-purple-600">4.2</p>
+                          <p className="text-sm text-gray-600">Avg. Facility Rating</p>
+                        </div>
+                        <div className="text-center p-4 bg-orange-50 rounded-lg">
+                          <p className="text-2xl font-bold text-orange-600">24min</p>
+                          <p className="text-sm text-gray-600">Avg. Session Duration</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
+                  <div className="space-y-3">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Download className="w-4 h-4 mr-2" />
+                      Export User Data
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Generate Report
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Send Announcement
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Shield className="w-4 h-4 mr-2" />
+                      System Settings
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="profile">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6">Admin Profile</h3>
+                    <form className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                          <Input type="text" defaultValue="John" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                          <Input type="text" defaultValue="Admin" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <Input type="email" defaultValue="admin@quickcourt.com" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <Input type="text" defaultValue="admin" />
+                      </div>
+                      <div className="pt-4">
+                        <Button type="submit">Update Profile</Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Admin Privileges</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">User Management</span>
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Facility Approval</span>
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">System Analytics</span>
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Report Moderation</span>
+                      <CheckCircle className="w-4 h-4 text-green-500" />
                     </div>
                   </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {usersLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : filteredUsers.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-                    <p className="text-gray-500">
-                      {searchTerm ? "Try adjusting your search terms." : "No users are registered yet."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredUsers.slice(0, 10).map((user: any) => (
-                      <UserCard key={user.id} user={user} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="facilities">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Facility Management
-                  <div className="flex items-center space-x-2">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        placeholder="Search facilities..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-64"
-                      />
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {facilitiesLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : filteredFacilities.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Building className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No facilities found</h3>
-                    <p className="text-gray-500">
-                      {searchTerm ? "Try adjusting your search terms." : "No facilities are registered yet."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredFacilities.slice(0, 10).map((facility: any) => (
-                      <FacilityCard key={facility.id} facility={facility} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="bookings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Booking Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {bookingsLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : bookings.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
-                    <p className="text-gray-500">Booking data will appear here as users make reservations.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {bookings.slice(0, 10).map((booking: any) => (
-                      <BookingCard key={booking.id} booking={booking} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="matches">
-            <Card>
-              <CardHeader>
-                <CardTitle>Match Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {matchesLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : matches.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No matches found</h3>
-                    <p className="text-gray-500">Match data will appear here as users create matches.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {matches.slice(0, 10).map((match: any) => (
-                      <MatchCard key={match.id} match={match} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
-}
-
-interface UserCardProps {
-  user: any;
-}
-
-function UserCard({ user }: UserCardProps) {
-  return (
-    <div className="flex items-center justify-between p-4 border rounded-lg">
-      <div className="flex items-center space-x-4">
-        <div className="p-2 bg-blue-100 rounded-full">
-          <Users className="w-5 h-5 text-blue-600" />
-        </div>
-        <div>
-          <h4 className="font-medium">{user.firstName} {user.lastName}</h4>
-          <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-            <span>{user.email}</span>
-            <span>@{user.username}</span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex items-center space-x-2">
-        <Badge variant={user.role === "admin" ? "destructive" : user.role === "facility_owner" ? "default" : "secondary"}>
-          {user.role.replace("_", " ")}
-        </Badge>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <Eye className="w-4 h-4 mr-2" />
-              View Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit User
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">
-              <Ban className="w-4 h-4 mr-2" />
-              Suspend User
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-  );
-}
-
-interface FacilityCardProps {
-  facility: any;
-}
-
-function FacilityCard({ facility }: FacilityCardProps) {
-  return (
-    <div className="flex items-center justify-between p-4 border rounded-lg">
-      <div className="flex items-center space-x-4">
-        <div className="p-2 bg-green-100 rounded-full">
-          <Building className="w-5 h-5 text-green-600" />
-        </div>
-        <div>
-          <h4 className="font-medium">{facility.name}</h4>
-          <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-            <span>{facility.city}</span>
-            <span>{facility.sportType}</span>
-            <span>₹{facility.pricePerHour}/hour</span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex items-center space-x-2">
-        <Badge variant={facility.isActive ? "default" : "secondary"}>
-          {facility.isActive ? "Active" : "Inactive"}
-        </Badge>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <Eye className="w-4 h-4 mr-2" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Facility
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">
-              <XCircle className="w-4 h-4 mr-2" />
-              Deactivate
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-  );
-}
-
-interface BookingCardProps {
-  booking: any;
-}
-
-function BookingCard({ booking }: BookingCardProps) {
-  return (
-    <div className="flex items-center justify-between p-4 border rounded-lg">
-      <div className="flex items-center space-x-4">
-        <div className="p-2 bg-purple-100 rounded-full">
-          <Calendar className="w-5 h-5 text-purple-600" />
-        </div>
-        <div>
-          <h4 className="font-medium">Booking #{booking.id?.slice(0, 8)}</h4>
-          <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-            <span>{format(new Date(booking.date || Date.now()), "MMM dd, yyyy")}</span>
-            <span>₹{booking.totalAmount}</span>
-          </div>
-        </div>
-      </div>
-      
-      <Badge variant={
-        booking.status === "confirmed" ? "default" :
-        booking.status === "cancelled" ? "destructive" :
-        "secondary"
-      }>
-        {booking.status}
-      </Badge>
-    </div>
-  );
-}
-
-interface MatchCardProps {
-  match: any;
-}
-
-function MatchCard({ match }: MatchCardProps) {
-  return (
-    <div className="flex items-center justify-between p-4 border rounded-lg">
-      <div className="flex items-center space-x-4">
-        <div className="p-2 bg-orange-100 rounded-full">
-          <Users className="w-5 h-5 text-orange-600" />
-        </div>
-        <div>
-          <h4 className="font-medium">{match.title}</h4>
-          <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-            <span>{match.sportType}</span>
-            <span>{match.currentPlayers}/{match.maxPlayers} players</span>
-            <span>₹{match.costPerPlayer}/player</span>
-          </div>
-        </div>
-      </div>
-      
-      <Badge variant={
-        match.status === "open" ? "default" :
-        match.status === "full" ? "secondary" :
-        match.status === "cancelled" ? "destructive" :
-        "outline"
-      }>
-        {match.status}
-      </Badge>
     </div>
   );
 }

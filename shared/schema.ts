@@ -66,10 +66,6 @@ export const bookings = pgTable("bookings", {
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: bookingStatusEnum("status").default("pending"),
   notes: text("notes"),
-  // Stripe payment fields
-  stripePaymentIntentId: varchar("stripe_payment_intent_id"),
-  stripePaymentStatus: varchar("stripe_payment_status").default("pending"), // pending, succeeded, failed, canceled
-  paymentMethod: varchar("payment_method").default("stripe"), // stripe, cash, etc.
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

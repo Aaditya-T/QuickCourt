@@ -2,17 +2,15 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/ui/navbar";
 import HeroSection from "@/components/ui/hero-section";
-import FacilityCard from "@/components/ui/facility-card";
 import MatchCard from "@/components/ui/match-card";
-import BookingModal from "@/components/ui/booking-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Link } from "wouter";
-import { Search, Calendar, Users, Star } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Search, Calendar, Users, Star, MapPin, Clock, Trophy } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
-  const [selectedFacility, setSelectedFacility] = useState(null);
-  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [, setLocation] = useLocation();
 
   // Fetch featured facilities
   const { data: facilities = [] } = useQuery({
@@ -35,8 +33,7 @@ export default function Home() {
   });
 
   const handleBookFacility = (facility: any) => {
-    setSelectedFacility(facility);
-    setBookingModalOpen(true);
+    setLocation(`/facilities/${facility.id}`);
   };
 
   const handleJoinMatch = (matchId: string) => {
@@ -63,7 +60,7 @@ export default function Home() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {facilities.slice(0, 6).map((facility: any) => (
-              <FacilityCard
+              <EnhancedFacilityCard
                 key={facility.id}
                 facility={facility}
                 onBook={() => handleBookFacility(facility)}
@@ -170,7 +167,7 @@ export default function Home() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Player Role */}
             <Card className="text-center p-8">
               <CardContent className="pt-6">
@@ -211,28 +208,6 @@ export default function Home() {
                 </ul>
                 <Link href="/signup?role=facility_owner">
                   <Button>List Your Facility</Button>
-                </Link>
-              </CardContent>
-            </Card>
-            
-            {/* Admin Role */}
-            <Card className="text-center p-8">
-              <CardContent className="pt-6">
-                <img 
-                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300" 
-                  alt="Administrator working on analytics" 
-                  className="w-32 h-32 object-cover rounded-full mx-auto mb-6"
-                />
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">For Administrators</h3>
-                <ul className="text-gray-600 space-y-2 mb-6 text-left">
-                  <li>• Platform oversight & management</li>
-                  <li>• User & facility verification</li>
-                  <li>• Dispute resolution</li>
-                  <li>• Analytics & insights</li>
-                  <li>• System configuration</li>
-                </ul>
-                <Link href="/signup?role=admin">
-                  <Button>Admin Access</Button>
                 </Link>
               </CardContent>
             </Card>
@@ -277,18 +252,106 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Booking Modal */}
-      <BookingModal
-        facility={selectedFacility}
-        open={bookingModalOpen}
-        onClose={() => {
-          setBookingModalOpen(false);
-          setSelectedFacility(null);
-        }}
-        onBookingComplete={() => {
-          // Optionally refresh data or navigate to bookings page
-        }}
-      />
+      {/* Booking Modal removed on home page */}
     </div>
+  );
+}
+
+// Enhanced Facility Card Component (same as on facilities page)
+function EnhancedFacilityCard({ facility, onBook }: { facility: any; onBook: () => void }) {
+  const defaultImages = [
+    "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=60",
+    "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=60",
+    "https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?auto=format&fit=crop&w=800&q=60",
+  ];
+
+  const image = facility.images?.[0] || defaultImages[0];
+
+  const sportTypeLabels: Record<string, string> = {
+    badminton: "Badminton",
+    tennis: "Tennis",
+    basketball: "Basketball",
+    football: "Football",
+    table_tennis: "Table Tennis",
+    squash: "Squash",
+  };
+
+  const sportIcons: Record<string, string> = {
+    badminton: "🏸",
+    tennis: "🎾",
+    basketball: "🏀",
+    football: "⚽",
+    table_tennis: "🏓",
+    squash: "🎯",
+  };
+
+  return (
+    <Card className="group overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-white/90 backdrop-blur-sm hover:scale-[1.02] h-full flex flex-col">
+      <div className="relative">
+        <img
+          src={image}
+          alt={facility.name}
+          className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-300"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+
+        {/* Rating Badge */}
+        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
+          <Star className="w-4 h-4 text-yellow-500 fill-current" />
+          <span className="text-sm font-semibold text-gray-800">{facility.rating}</span>
+        </div>
+      </div>
+
+      <CardContent className="p-6 flex-1 flex flex-col">
+        <div className="flex-1 space-y-4">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+              {facility.name}
+            </h3>
+            <div className="flex items-center text-gray-600 text-sm mb-3">
+              <MapPin className="w-4 h-4 mr-1" />
+              <span>{facility.city}, {facility.state}</span>
+            </div>
+          </div>
+
+          {/* Sports Available */}
+          <div>
+            <div className="text-sm font-semibold text-gray-700 mb-2">Sports Available</div>
+            <div className="flex flex-wrap gap-2">
+              {facility.sportTypes?.slice(0, 4).map((sport: string) => (
+                <Badge
+                  key={sport}
+                  variant="secondary"
+                  className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-0"
+                >
+                  {sportIcons[sport]} {sportTypeLabels[sport] || sport}
+                </Badge>
+              ))}
+              {facility.sportTypes?.length > 4 && (
+                <Badge variant="outline" className="text-gray-600">
+                  +{facility.sportTypes.length - 4} more
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Operating Hours */}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Clock className="w-4 h-4" />
+            <span>Open today: 6:00 AM - 11:00 PM</span>
+          </div>
+        </div>
+
+        {/* Fixed Button at Bottom */}
+        <div className="mt-4 pt-4 border-t">
+          <Button
+            onClick={onBook}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            View Details & Book
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

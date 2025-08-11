@@ -1,6 +1,6 @@
-import { 
+import {
   users, facilities, bookings, matches, matchParticipants, reviews, otpCodes,
-  type User, type InsertUser, type Facility, type InsertFacility, 
+  type User, type InsertUser, type Facility, type InsertFacility,
   type Booking, type InsertBooking, type Match, type InsertMatch,
   type MatchParticipant, type InsertMatchParticipant, type Review, type InsertReview,
   type OtpCode, type InsertOtpCode
@@ -23,6 +23,7 @@ export interface IStorage {
   createFacility(facility: InsertFacility): Promise<Facility>;
   updateFacility(id: string, updates: Partial<InsertFacility>): Promise<Facility | undefined>;
   deleteFacility(id: string): Promise<boolean>;
+  hardDeleteFacility(id: string): Promise<boolean>;
 
   // Booking operations
   getBookings(userId?: string): Promise<Booking[]>;
@@ -79,16 +80,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined> {
-    const [user] = await db.update(users).set({...updates, updatedAt: new Date()}).where(eq(users.id, id)).returning();
+    const [user] = await db.update(users).set({ ...updates, updatedAt: new Date() }).where(eq(users.id, id)).returning();
     return user || undefined;
   }
 
   // Facility operations
   async getFacilities(filters?: { city?: string; sportType?: string; searchTerm?: string }): Promise<Facility[]> {
     let conditions = [eq(facilities.isActive, true)];
-    
+
     if (filters?.city) {
-      conditions.push(like(facilities.city, `%${filters.city}%`));
+      conditions.push(like(facilities.city, `%${filters.city.toLowerCase()}%`));
     }
     if (filters?.sportType && filters.sportType !== "all" && filters.sportType !== "") {
       // Use SQL operator to check if the sport type is in the array
@@ -97,8 +98,8 @@ export class DatabaseStorage implements IStorage {
     if (filters?.searchTerm) {
       conditions.push(
         or(
-          like(facilities.name, `%${filters.searchTerm}%`),
-          like(facilities.description, `%${filters.searchTerm}%`)
+          like(facilities.name, `%${filters.searchTerm.toLowerCase()}%`),
+          like(facilities.description, `%${filters.searchTerm.toLowerCase()}%`)
         )!
       );
     }
@@ -121,12 +122,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateFacility(id: string, updates: Partial<InsertFacility>): Promise<Facility | undefined> {
-    const [facility] = await db.update(facilities).set({...updates, updatedAt: new Date()}).where(eq(facilities.id, id)).returning();
+    console.log('Storage: Updating facility', id, 'with updates:', updates);
+    const [facility] = await db.update(facilities).set({ ...updates, updatedAt: new Date() }).where(eq(facilities.id, id)).returning();
+    console.log('Storage: Update result:', facility);
     return facility || undefined;
   }
 
   async deleteFacility(id: string): Promise<boolean> {
     const result = await db.update(facilities).set({ isActive: false, updatedAt: new Date() }).where(eq(facilities.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async hardDeleteFacility(id: string): Promise<boolean> {
+    const result = await db.delete(facilities).where(eq(facilities.id, id));
     return (result.rowCount || 0) > 0;
   }
 
@@ -145,13 +153,13 @@ export class DatabaseStorage implements IStorage {
 
   async getBookingsByFacility(facilityId: string, date?: Date): Promise<Booking[]> {
     let conditions = [eq(bookings.facilityId, facilityId)];
-    
+
     if (date) {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
-      
+
       conditions.push(gte(bookings.date, startOfDay));
       conditions.push(lte(bookings.date, endOfDay));
     }
@@ -167,7 +175,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateBooking(id: string, updates: Partial<InsertBooking>): Promise<Booking | undefined> {
-    const [booking] = await db.update(bookings).set({...updates, updatedAt: new Date()}).where(eq(bookings.id, id)).returning();
+    const [booking] = await db.update(bookings).set({ ...updates, updatedAt: new Date() }).where(eq(bookings.id, id)).returning();
     return booking || undefined;
   }
 
@@ -179,7 +187,7 @@ export class DatabaseStorage implements IStorage {
   // Match operations
   async getMatches(filters?: { city?: string; sportType?: string; skillLevel?: string }): Promise<Match[]> {
     let conditions = [eq(matches.status, "open")];
-    
+
     if (filters?.city) {
       conditions.push(like(facilities.city, `%${filters.city}%`));
     }
@@ -226,7 +234,7 @@ export class DatabaseStorage implements IStorage {
 
   async createMatch(match: InsertMatch): Promise<Match> {
     const [newMatch] = await db.insert(matches).values(match).returning();
-    
+
     // Automatically add the creator as a participant
     await db.insert(matchParticipants).values({
       matchId: newMatch.id,
@@ -237,7 +245,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateMatch(id: string, updates: Partial<InsertMatch>): Promise<Match | undefined> {
-    const [match] = await db.update(matches).set({...updates, updatedAt: new Date()}).where(eq(matches.id, id)).returning();
+    const [match] = await db.update(matches).set({ ...updates, updatedAt: new Date() }).where(eq(matches.id, id)).returning();
     return match || undefined;
   }
 
@@ -249,7 +257,7 @@ export class DatabaseStorage implements IStorage {
   // Match participant operations
   async joinMatch(matchId: string, userId: string): Promise<MatchParticipant> {
     const [participant] = await db.insert(matchParticipants).values({ matchId, userId }).returning();
-    
+
     // Update current player count
     await db.update(matches)
       .set({ currentPlayers: sql`${matches.currentPlayers} + 1` })
@@ -261,7 +269,7 @@ export class DatabaseStorage implements IStorage {
   async leaveMatch(matchId: string, userId: string): Promise<boolean> {
     const result = await db.delete(matchParticipants)
       .where(and(eq(matchParticipants.matchId, matchId), eq(matchParticipants.userId, userId)));
-    
+
     if ((result.rowCount || 0) > 0) {
       // Update current player count
       await db.update(matches)
@@ -278,12 +286,28 @@ export class DatabaseStorage implements IStorage {
 
   // Review operations
   async getReviewsByFacility(facilityId: string): Promise<Review[]> {
-    return await db.select().from(reviews).where(eq(reviews.facilityId, facilityId)).orderBy(desc(reviews.createdAt));
+    return await db
+      .select({
+        id: reviews.id,
+        userId: reviews.userId,
+        facilityId: reviews.facilityId,
+        rating: reviews.rating,
+        comment: reviews.comment,
+        createdAt: reviews.createdAt,
+        user: {
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+      })
+      .from(reviews)
+      .leftJoin(users, eq(reviews.userId, users.id))
+      .where(eq(reviews.facilityId, facilityId))
+      .orderBy(desc(reviews.createdAt));
   }
 
   async createReview(review: InsertReview): Promise<Review> {
     const [newReview] = await db.insert(reviews).values(review).returning();
-    
+
     // Update facility rating
     const [{ avgRating, totalReviews }] = await db
       .select({

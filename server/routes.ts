@@ -6,8 +6,34 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema } from "@shared/schema";
+import multer from "multer";
+import { imageUploadService } from "./imageUploadService";
+
+import Stripe from "stripe";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+
+// Initialize Stripe
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Check file type
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+});
 
 // Rate limiter for OTP requests: 2 requests per minute per IP
 const otpRateLimiter = rateLimit({
@@ -18,11 +44,6 @@ const otpRateLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  // Key generator to identify users (by IP address)
-  keyGenerator: (req) => {
-    // Use IP address as the key for rate limiting
-    return req.ip || req.connection.remoteAddress || 'unknown';
-  },
   // Handler for when rate limit is exceeded
   handler: (req, res) => {
     res.status(429).json({
@@ -289,6 +310,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/facilities/:id", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      const facility = await storage.getFacility(req.params.id);
+      if (!facility) {
+        return res.status(404).json({ message: "Facility not found" });
+      }
+
+      // Check ownership (unless admin)
+      if (req.user.role !== "admin" && facility.ownerId !== req.user.userId) {
+        return res.status(403).json({ message: "Not authorized to delete this facility" });
+      }
+
+      // Check if there are any active bookings for this facility
+      const activeBookings = await storage.getBookingsByFacility(req.params.id);
+      const hasActiveBookings = activeBookings.some((booking: any) => 
+        new Date(booking.date) > new Date() && booking.status !== "cancelled"
+      );
+
+      if (hasActiveBookings) {
+        return res.status(400).json({ 
+          message: "Cannot delete facility with active or future bookings. Please cancel all bookings first." 
+        });
+      }
+
+      const success = await storage.hardDeleteFacility(req.params.id);
+      if (success) {
+        res.json({ message: "Facility deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete facility" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete facility", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   app.get("/api/facilities/:id/bookings", authenticateToken, async (req: any, res) => {
     try {
       const date = req.query.date ? new Date(req.query.date as string) : undefined;
@@ -421,9 +477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Facility owner routes
   app.get("/api/owner/facilities", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
     try {
-      console.log('Getting facilities for user:', req.user.userId, 'role:', req.user.role);
       const facilities = await storage.getFacilitiesByOwner(req.user.userId);
-      console.log('Found facilities:', facilities.length, 'facilities');
       res.json(facilities);
     } catch (error) {
       console.error('Error getting owner facilities:', error);
@@ -452,6 +506,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Toggle facility status (active/inactive)
+  app.patch("/api/owner/facilities/:id/toggle-status", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      
+      const facility = await storage.getFacility(req.params.id);
+      if (!facility) {
+        return res.status(404).json({ message: "Facility not found" });
+      }
+
+
+      // Check ownership (unless admin)
+      if (req.user.role !== "admin" && facility.ownerId !== req.user.userId) {
+        return res.status(403).json({ message: "Not authorized to update this facility" });
+      }
+
+      const newStatus = !facility.isActive;
+      
+      const updatedFacility = await storage.updateFacility(req.params.id, { isActive: newStatus });
+      
+      if (updatedFacility) {
+        res.json({ 
+          message: `Facility ${newStatus ? 'activated' : 'deactivated'} successfully`,
+          facility: updatedFacility 
+        });
+      } else {
+        res.status(500).json({ message: "Failed to update facility status" });
+      }
+    } catch (error) {
+      console.error('Error in toggle facility status:', error);
+      res.status(500).json({ message: "Failed to toggle facility status", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   // Review routes
   app.get("/api/facilities/:id/reviews", async (req, res) => {
     try {
@@ -474,6 +561,312 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(review);
     } catch (error) {
       res.status(400).json({ message: "Invalid review data", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+    // Test endpoints to verify server is working
+  app.get("/api/test", (req, res) => {
+    res.json({ message: "Server is working", timestamp: new Date().toISOString() });
+  });
+
+  app.get("/api/test-auth", authenticateToken, (req: any, res) => {
+    res.json({ 
+      message: "Authentication working", 
+      user: req.user,
+      timestamp: new Date().toISOString() 
+    });
+  });
+
+  // Test file upload without authentication first
+  app.post("/api/test-upload", upload.single('image'), (req: any, res) => {
+    res.json({ 
+      message: "Upload test successful",
+      hasFile: !!req.file,
+      fileSize: req.file?.size,
+      fileType: req.file?.mimetype
+    });
+  });
+
+  // Test authentication with POST
+  app.post("/api/test-auth-post", authenticateToken, (req: any, res) => {
+    res.json({ 
+      message: "POST authentication working", 
+      user: req.user,
+      timestamp: new Date().toISOString() 
+    });
+  });
+
+  // Test image URL accessibility
+  app.get("/api/test-image/:filename", async (req: any, res) => {
+    try {
+      const { filename } = req.params;
+      const imageUrl = `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET_NAME || 'quickcourt-images'}/${filename}`;
+      
+      res.json({ 
+        message: "Image URL generated",
+        filename,
+        imageUrl,
+        bucketName: process.env.R2_BUCKET_NAME || 'quickcourt-images',
+        accountId: process.env.R2_ACCOUNT_ID
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to generate image URL", error: error.message });
+    }
+  });
+
+  // Image upload routes
+  app.post("/api/upload/image", authenticateToken, upload.single('image'), async (req: any, res) => {
+    // Handle multer errors
+    if (req.fileValidationError) {
+      return res.status(400).json({ message: req.fileValidationError });
+    }
+    try {
+      console.log('Image upload request received:', {
+        hasFile: !!req.file,
+        fileSize: req.file?.size,
+        fileType: req.file?.mimetype,
+        fileName: req.file?.originalname,
+        user: req.user
+      });
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      // Validate file
+      const validation = imageUploadService.validateFile(req.file);
+      if (!validation.valid) {
+        return res.status(400).json({ message: validation.error });
+      }
+
+      // Upload image
+      const uploadedImage = await imageUploadService.uploadImage(req.file, 'facilities');
+      
+      console.log('Image uploaded successfully:', uploadedImage);
+      
+      res.status(201).json({
+        message: "Image uploaded successfully",
+        image: uploadedImage
+      });
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      res.status(500).json({ 
+        message: "Failed to upload image", 
+        error: error.message 
+      });
+    }
+  });
+
+  app.delete("/api/upload/image/:filename", authenticateToken, async (req: any, res) => {
+    try {
+      const { filename } = req.params;
+      
+      // Extract filename from the full path if needed
+      const imageInfo = imageUploadService.getImageInfoFromUrl(filename);
+      const actualFilename = imageInfo ? imageInfo.filename : filename;
+      
+      const success = await imageUploadService.deleteImage(actualFilename);
+      
+      if (success) {
+        res.json({ message: "Image deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete image" });
+      }
+    } catch (error: any) {
+      console.error('Image deletion error:', error);
+      res.status(500).json({ 
+        message: "Failed to delete image", 
+        error: error.message 
+      });
+    }
+  });
+
+  // Payment routes - Stripe integration
+  console.log('Stripe Config:', { 
+    secret_key: process.env.STRIPE_SECRET_KEY ? 'SET' : 'MISSING',
+    publishable_key: process.env.VITE_STRIPE_PUBLIC_KEY ? 'SET' : 'MISSING'
+  });
+
+  // Create payment intent
+  app.post("/api/create-payment-intent", async (req, res) => {
+    try {
+      console.log('Payment intent request body:', req.body);
+
+      // Validate required fields
+      if (!req.body.amount || !req.body.currency) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields: amount or currency"
+        });
+      }
+
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return res.status(500).json({
+          success: false,
+          message: "Payment gateway not configured properly"
+        });
+      }
+
+      const { amount, currency = 'inr', metadata = {} } = req.body;
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100), // Convert to smallest currency unit (paise for INR)
+        currency: currency,
+        metadata: {
+          transactionId: req.body.transactionId || `txn_${Date.now()}`,
+          customerName: req.body.name || 'Guest',
+          customerPhone: req.body.number || '',
+          ...metadata
+        },
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+
+      console.log('Payment intent created:', paymentIntent.id);
+
+      res.json({
+        success: true,
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id
+      });
+
+    } catch (error: any) {
+      console.error('Payment intent creation error:', error);
+      
+      res.status(500).json({
+        success: false,
+        message: error.message || "Payment intent creation failed",
+        error: error.message
+      });
+    }
+  });
+
+  // Confirm payment and handle success
+  app.post("/api/confirm-payment", async (req, res) => {
+    try {
+      const { paymentIntentId } = req.body;
+
+      if (!paymentIntentId) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment intent ID is required"
+        });
+      }
+
+      // Retrieve the payment intent to check its status
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      if (paymentIntent.status === 'succeeded') {
+        // Payment was successful
+        console.log('Payment confirmed:', paymentIntentId);
+        
+        res.json({
+          success: true,
+          status: paymentIntent.status,
+          amount: paymentIntent.amount,
+          currency: paymentIntent.currency,
+          metadata: paymentIntent.metadata
+        });
+      } else {
+        res.json({
+          success: false,
+          status: paymentIntent.status,
+          message: `Payment status: ${paymentIntent.status}`
+        });
+      }
+
+    } catch (error: any) {
+      console.error('Payment confirmation error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Payment confirmation failed"
+      });
+    }
+  });
+
+  // Get payment status
+  app.get("/api/payment-status/:paymentIntentId", async (req, res) => {
+    try {
+      const { paymentIntentId } = req.params;
+
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      res.json({
+        success: true,
+        status: paymentIntent.status,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        metadata: paymentIntent.metadata
+      });
+
+    } catch (error: any) {
+      console.error('Payment status error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to retrieve payment status"
+      });
+    }
+  });
+
+  // Create booking with payment intent
+  app.post("/api/create-booking-payment", authenticateToken, async (req: any, res) => {
+    try {
+      const { facilityId, date, startTime, endTime, totalAmount, notes } = req.body;
+      
+      // Validate required fields
+      if (!facilityId || !date || !startTime || !endTime || !totalAmount) {
+        return res.status(400).json({
+          message: "Missing required booking fields"
+        });
+      }
+
+      // Create payment intent first
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(totalAmount * 100), // Convert to paise
+        currency: 'inr',
+        metadata: {
+          facilityId,
+          userId: req.user.userId,
+          bookingDate: date,
+          startTime,
+          endTime
+        },
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+
+      // Create booking with payment intent ID
+      const bookingData = insertBookingSchema.parse({
+        userId: req.user.userId,
+        facilityId,
+        date: new Date(date),
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        totalAmount,
+        notes: notes || '',
+        stripePaymentIntentId: paymentIntent.id,
+        stripePaymentStatus: 'pending',
+        paymentMethod: 'stripe',
+        status: 'pending'
+      });
+
+      const booking = await storage.createBooking(bookingData);
+
+      res.json({
+        success: true,
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        booking
+      });
+
+    } catch (error: any) {
+      console.error('Booking payment creation error:', error);
+      res.status(500).json({
+        message: error.message || "Failed to create booking payment"
+      });
     }
   });
 
