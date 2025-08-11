@@ -817,17 +817,18 @@ export default function Facility() {
                     </div>
                   </CardContent>
                 </Card>
+              </div>
 
-                {/* Right Sidebar - Booking Summary (Static) */}
-                <div className="lg:col-span-1">
-                  <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-blue-50 sticky top-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <CalendarIcon className="w-5 h-5 text-blue-600" />
-                        Booking Summary
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+              {/* Right Sidebar - Booking Summary */}
+              <div className="lg:col-span-1">
+                <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-blue-50 sticky top-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <CalendarIcon className="w-5 h-5 text-blue-600" />
+                      Booking Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                       {/* Quick Info */}
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div className="bg-blue-50 p-3 rounded-lg">
@@ -909,10 +910,12 @@ export default function Facility() {
                     </CardContent>
                   </Card>
                 </div>
-              </div>
+            </div>
+          </div>
 
-              {/* Reviews Section - Compact */}
-              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm mt-6">
+          {/* Reviews Section - Bottom */}
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -1041,9 +1044,8 @@ export default function Facility() {
                 </CardContent>
               </Card>
             </div>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
+          </>
+        )}
+      </div>
+    );
+  }
