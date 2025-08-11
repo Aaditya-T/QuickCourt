@@ -151,7 +151,7 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
 
     const facilityData = {
       ...formData,
-      pricePerHour: parseFloat(formData.pricePerHour),
+      // Keep pricePerHour as string since Drizzle decimal expects string
       ownerId: user.id,
     };
 
