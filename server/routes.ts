@@ -342,8 +342,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/facilities/:id", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      const facility = await storage.getFacility(req.params.id);
+      if (!facility) {
+        return res.status(404).json({ message: "Facility not found" });
+      }
+
+      // Check ownership (unless admin)
+      if (req.user.role !== "admin" && facility.ownerId !== req.user.userId) {
+        return res.status(403).json({ message: "Not authorized to delete this facility" });
+      }
+
+      const success = await storage.deleteFacility(req.params.id);
+      if (success) {
+        res.json({ message: "Facility deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete facility" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete facility", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Facility owner specific routes
+  app.get("/api/owner/facilities", authenticateToken, requireRole(["facility_owner"]), async (req: any, res) => {
+    try {
+      const facilities = await storage.getFacilities({});
+      const ownerFacilities = facilities.filter(facility => facility.ownerId === req.user.userId);
+      res.json(ownerFacilities);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get facilities", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.get("/api/owner/bookings", authenticateToken, requireRole(["facility_owner"]), async (req: any, res) => {
+    try {
+      // Get all facilities owned by this user
+      const facilities = await storage.getFacilities({});
+      const ownerFacilities = facilities.filter(facility => facility.ownerId === req.user.userId);
+      
+      // Get bookings for all owned facilities
+      const allBookings = [];
+      for (const facility of ownerFacilities) {
+        const bookings = await storage.getBookingsByFacility(facility.id);
+        allBookings.push(...bookings);
+      }
+      
+      res.json(allBookings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get bookings", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   app.get("/api/facilities/:id/bookings", authenticateToken, async (req: any, res) => {
     try {
+      // If facility owner, check ownership
+      if (req.user.role === "facility_owner") {
+        const facility = await storage.getFacility(req.params.id);
+        if (!facility || facility.ownerId !== req.user.userId) {
+          return res.status(403).json({ message: "Not authorized to view bookings for this facility" });
+        }
+      }
+      
       const date = req.query.date ? new Date(req.query.date as string) : undefined;
       const bookings = await storage.getBookingsByFacility(req.params.id, date);
       res.json(bookings);
@@ -352,8 +413,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Booking routes
-  app.get("/api/bookings", authenticateToken, async (req: any, res) => {
+  // Booking routes - restricted to users and admins only
+  app.get("/api/bookings", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
     try {
       const bookings = await storage.getBookings(req.user.userId);
       res.json(bookings);
@@ -362,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/bookings", authenticateToken, async (req: any, res) => {
+  app.post("/api/bookings", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
     try {
       const bookingData = insertBookingSchema.parse({
         ...req.body,
@@ -376,7 +437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/bookings/:id/cancel", authenticateToken, async (req: any, res) => {
+  app.put("/api/bookings/:id/cancel", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
     try {
       const booking = await storage.getBooking(req.params.id);
       if (!booking) {
@@ -426,7 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/matches", authenticateToken, async (req: any, res) => {
+  app.post("/api/matches", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
     try {
       const matchData = insertMatchSchema.parse({
         ...req.body,
@@ -440,7 +501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/matches/:id/join", authenticateToken, async (req: any, res) => {
+  app.post("/api/matches/:id/join", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
     try {
       const match = await storage.getMatch(req.params.id);
       if (!match) {
@@ -458,7 +519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/matches/:id/leave", authenticateToken, async (req: any, res) => {
+  app.delete("/api/matches/:id/leave", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
     try {
       const success = await storage.leaveMatch(req.params.id, req.user.userId);
       if (success) {
@@ -481,7 +542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/facilities/:id/reviews", authenticateToken, async (req: any, res) => {
+  app.post("/api/facilities/:id/reviews", authenticateToken, requireRole(["user", "admin"]), async (req: any, res) => {
     try {
       const reviewData = insertReviewSchema.parse({
         ...req.body,

@@ -17,10 +17,31 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navItems = [
-    { href: "/facilities", label: "Find Courts" },
-    { href: "/matches", label: "Matches" },
-  ];
+  const getNavItems = () => {
+    if (!user) {
+      return [
+        { href: "/facilities", label: "Find Courts" },
+        { href: "/matches", label: "Matches" },
+      ];
+    }
+    
+    switch (user.role) {
+      case "facility_owner":
+        return []; // Facility owners don't get general navigation items
+      case "admin":
+        return [
+          { href: "/facilities", label: "Find Courts" },
+          { href: "/matches", label: "Matches" },
+        ];
+      default: // regular users
+        return [
+          { href: "/facilities", label: "Find Courts" },
+          { href: "/matches", label: "Matches" },
+        ];
+    }
+  };
+
+  const navItems = getNavItems();
 
   const getDashboardLink = () => {
     if (!user) return "/dashboard";
@@ -68,7 +89,7 @@ export default function Navbar() {
             } transition-colors`}
             onClick={() => mobile && setMobileMenuOpen(false)}
           >
-            My Bookings
+            {user.role === "facility_owner" ? "My Facilities" : user.role === "admin" ? "Admin Panel" : "My Bookings"}
           </a>
         </Link>
       )}

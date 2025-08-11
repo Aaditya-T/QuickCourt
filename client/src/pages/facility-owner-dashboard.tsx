@@ -39,32 +39,15 @@ export default function FacilityOwnerDashboard() {
   const [createFacilityModalOpen, setCreateFacilityModalOpen] = useState(false);
 
   // Fetch facilities owned by the user
-  const { data: facilities = [], isLoading: facilitiesLoading } = useQuery({
-    queryKey: ["/api/facilities", "owner", user?.id],
+  const { data: facilities = [], isLoading: facilitiesLoading } = useQuery<any[]>({
+    queryKey: ["/api/owner/facilities"],
     enabled: !!user && !!token && user.role === "facility_owner",
-    queryFn: async () => {
-      // This would require a separate endpoint for owner's facilities
-      // For now, fetch all facilities and filter client-side
-      const response = await fetch("/api/facilities", {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error("Failed to fetch facilities");
-      const allFacilities = await response.json();
-      return allFacilities.filter((facility: any) => facility.ownerId === user?.id);
-    },
   });
 
   // Fetch bookings for owned facilities
-  const { data: allBookings = [], isLoading: bookingsLoading } = useQuery({
-    queryKey: ["/api/bookings", "facilities"],
-    enabled: !!user && !!token && facilities.length > 0,
-    queryFn: async () => {
-      // This would require endpoints to get bookings by facility owner
-      // For now, we'll show a placeholder
-      return [];
-    },
+  const { data: allBookings = [], isLoading: bookingsLoading } = useQuery<any[]>({
+    queryKey: ["/api/owner/bookings"],
+    enabled: !!user && !!token && user.role === "facility_owner",
   });
 
   // Delete facility mutation
@@ -77,7 +60,7 @@ export default function FacilityOwnerDashboard() {
         title: "Facility Deleted",
         description: "Your facility has been successfully removed.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/facilities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
     },
     onError: (error: any) => {
       toast({
@@ -365,7 +348,7 @@ export default function FacilityOwnerDashboard() {
         open={createFacilityModalOpen}
         onClose={() => setCreateFacilityModalOpen(false)}
         onFacilityCreated={() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/facilities"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
         }}
       />
     </div>
