@@ -312,11 +312,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Facility routes
   app.get("/api/facilities", async (req, res) => {
     try {
-      const { city, sportType, searchTerm } = req.query;
+      const { city, sportType, searchTerm, sortBy, sortOrder } = req.query;
       const facilities = await storage.getFacilities({
         city: city as string,
         sportType: sportType as string,
         searchTerm: searchTerm as string,
+        sortBy: sortBy as 'rating' | 'price' | 'name',
+        sortOrder: sortOrder as 'asc' | 'desc',
       });
       res.json(facilities);
     } catch (error) {
@@ -633,6 +635,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Invalid review data", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
+
+
 
     // Test endpoints to verify server is working
   app.get("/api/test", (req, res) => {

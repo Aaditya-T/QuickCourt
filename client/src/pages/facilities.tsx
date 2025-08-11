@@ -16,16 +16,9 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Filter, MapPin, Trophy } from "lucide-react";
+import { Search, Filter, MapPin, Trophy, ArrowUpDown } from "lucide-react";
 
-const sportTypeLabels: Record<string, string> = {
-  badminton: "Badminton",
-  tennis: "Tennis",
-  basketball: "Basketball",
-  football: "Football",
-  table_tennis: "Table Tennis",
-  squash: "Squash",
-};
+
 
 const sportIcons: Record<string, string> = {
   badminton: "🏸",
@@ -43,6 +36,8 @@ export default function Facilities() {
     sportType: "",
     searchTerm: "",
     priceRange: "",
+    sortBy: "rating",
+    sortOrder: "desc",
   });
 
   // Parse URL parameters on mount
@@ -53,6 +48,8 @@ export default function Facilities() {
       sportType: params.get("sportType") || "",
       searchTerm: params.get("searchTerm") || "",
       priceRange: params.get("priceRange") || "",
+      sortBy: params.get("sortBy") || "rating",
+      sortOrder: params.get("sortOrder") || "desc",
     });
   }, [location]);
 
@@ -65,6 +62,8 @@ export default function Facilities() {
       if (filters.sportType) params.set("sportType", filters.sportType);
       if (filters.searchTerm) params.set("searchTerm", filters.searchTerm);
       if (filters.priceRange) params.set("priceRange", filters.priceRange);
+      if (filters.sortBy) params.set("sortBy", filters.sortBy);
+      if (filters.sortOrder) params.set("sortOrder", filters.sortOrder);
 
       const response = await fetch(`/api/facilities?${params.toString()}`);
       if (!response.ok) throw new Error("Failed to fetch facilities");
@@ -75,7 +74,19 @@ export default function Facilities() {
   const handleFilterChange = (field: string, value: string) => {
     // Convert "all" back to empty string for API filtering
     const filterValue = value === "all" ? "" : value;
-    setFilters(prev => ({ ...prev, [field]: filterValue }));
+    const newFilters = { ...filters, [field]: filterValue };
+    setFilters(newFilters);
+    
+    // Update URL with new filters
+    const params = new URLSearchParams();
+    Object.entries(newFilters).forEach(([key, val]) => {
+      if (val && val !== "all") {
+        params.set(key, val);
+      }
+    });
+    
+    const newUrl = params.toString() ? `/facilities?${params.toString()}` : '/facilities';
+    window.history.replaceState({}, '', newUrl);
   };
 
   const handleSearch = () => {
@@ -136,82 +147,136 @@ export default function Facilities() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div>
-                <Label htmlFor="searchTerm" className="text-sm font-medium mb-2 block text-gray-700">
-                  <Search className="w-4 h-4 inline mr-1" />
-                  Search Facilities
-                </Label>
-                <Input
-                  id="searchTerm"
-                  placeholder="Search by name..."
-                  value={filters.searchTerm}
-                  onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
-                  className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                />
+            <div className="space-y-4">
+              {/* First Row - Search and Location */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="searchTerm" className="text-sm font-medium mb-2 block text-gray-700">
+                    <Search className="w-4 h-4 inline mr-1" />
+                    Search Facilities
+                  </Label>
+                  <Input
+                    id="searchTerm"
+                    placeholder="Search by name..."
+                    value={filters.searchTerm}
+                    onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
+                    className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="city" className="text-sm font-medium mb-2 block text-gray-700">
+                    <MapPin className="w-4 h-4 inline mr-1" />
+                    Location
+                  </Label>
+                  <Input
+                    id="city"
+                    placeholder="Enter city..."
+                    value={filters.city}
+                    onChange={(e) => handleFilterChange("city", e.target.value)}
+                    className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="city" className="text-sm font-medium mb-2 block text-gray-700">
-                  <MapPin className="w-4 h-4 inline mr-1" />
-                  Location
-                </Label>
-                <Input
-                  id="city"
-                  placeholder="Enter city..."
-                  value={filters.city}
-                  onChange={(e) => handleFilterChange("city", e.target.value)}
-                  className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                />
+              {/* Second Row - Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label htmlFor="sportType" className="text-sm font-medium mb-2 block text-gray-700">
+                    <Trophy className="w-4 h-4 inline mr-1" />
+                    Sport Type
+                  </Label>
+                  <Select value={filters.sportType || "all"} onValueChange={(value) => handleFilterChange("sportType", value)}>
+                    <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue placeholder="All Sports" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">🏆 All Sports</SelectItem>
+                      <SelectItem value="badminton">{sportIcons.badminton} Badminton</SelectItem>
+                      <SelectItem value="tennis">{sportIcons.tennis} Tennis</SelectItem>
+                      <SelectItem value="basketball">{sportIcons.basketball} Basketball</SelectItem>
+                      <SelectItem value="football">{sportIcons.football} Football</SelectItem>
+                      <SelectItem value="table_tennis">{sportIcons.table_tennis} Table Tennis</SelectItem>
+                      <SelectItem value="squash">{sportIcons.squash} Squash</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="priceRange" className="text-sm font-medium mb-2 block text-gray-700">
+                    💰 Price Range
+                  </Label>
+                  <Select value={filters.priceRange || "all"} onValueChange={(value) => handleFilterChange("priceRange", value)}>
+                    <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue placeholder="Any Price" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Any Price</SelectItem>
+                      <SelectItem value="budget">₹ Budget (Under ₹500/hr)</SelectItem>
+                      <SelectItem value="mid">₹₹ Mid-range (₹500-1000/hr)</SelectItem>
+                      <SelectItem value="premium">₹₹₹ Premium (Above ₹1000/hr)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="sortBy" className="text-sm font-medium mb-2 block text-gray-700">
+                    <ArrowUpDown className="w-4 h-4 inline mr-1" />
+                    Sort By
+                  </Label>
+                  <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange("sortBy", value)}>
+                    <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rating">⭐ Rating</SelectItem>
+                      <SelectItem value="price">💰 Price</SelectItem>
+                      <SelectItem value="name">📝 Name</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="sortOrder" className="text-sm font-medium mb-2 block text-gray-700">
+                    Order
+                  </Label>
+                  <Select value={filters.sortOrder} onValueChange={(value) => handleFilterChange("sortOrder", value)}>
+                    <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="desc">↓ High to Low</SelectItem>
+                      <SelectItem value="asc">↑ Low to High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="sportType" className="text-sm font-medium mb-2 block text-gray-700">
-                  <Trophy className="w-4 h-4 inline mr-1" />
-                  Sport Type
-                </Label>
-                <Select value={filters.sportType || "all"} onValueChange={(value) => handleFilterChange("sportType", value)}>
-                  <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue placeholder="All Sports" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">🏆 All Sports</SelectItem>
-                    <SelectItem value="badminton">{sportIcons.badminton} Badminton</SelectItem>
-                    <SelectItem value="tennis">{sportIcons.tennis} Tennis</SelectItem>
-                    <SelectItem value="basketball">{sportIcons.basketball} Basketball</SelectItem>
-                    <SelectItem value="football">{sportIcons.football} Football</SelectItem>
-                    <SelectItem value="table_tennis">{sportIcons.table_tennis} Table Tennis</SelectItem>
-                    <SelectItem value="squash">{sportIcons.squash} Squash</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="priceRange" className="text-sm font-medium mb-2 block text-gray-700">
-                  💰 Price Range
-                </Label>
-                <Select value={filters.priceRange || "all"} onValueChange={(value) => handleFilterChange("priceRange", value)}>
-                  <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue placeholder="Any Price" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Any Price</SelectItem>
-                    <SelectItem value="budget">₹ Budget (Under ₹500/hr)</SelectItem>
-                    <SelectItem value="mid">₹₹ Mid-range (₹500-1000/hr)</SelectItem>
-                    <SelectItem value="premium">₹₹₹ Premium (Above ₹1000/hr)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-end">
-                <Button onClick={handleSearch} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg">
+              {/* Search Button */}
+              <div className="flex justify-center">
+                <Button onClick={handleSearch} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg px-8">
                   <Search className="w-4 h-4 mr-2" />
-                  Search
+                  Search Facilities
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Results Summary */}
+        {!isLoading && (
+          <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="text-gray-600">
+              <span className="font-semibold text-gray-800">{facilities.length}</span> facilities found
+              {filters.city && <span> in <span className="font-medium">{filters.city}</span></span>}
+              {filters.sportType && <span> for <span className="font-medium">{sportIcons[filters.sportType]} {filters.sportType}</span></span>}
+            </div>
+            <div className="text-sm text-gray-500">
+              Sorted by {filters.sortBy === 'rating' ? '⭐ Rating' : filters.sortBy === 'price' ? '💰 Price' : '📝 Name'} 
+              ({filters.sortOrder === 'desc' ? 'High to Low' : 'Low to High'})
+            </div>
+          </div>
+        )}
 
         {/* Facilities Grid */}
         {isLoading ? (
@@ -241,14 +306,32 @@ export default function Facilities() {
                   <Search className="w-12 h-12 text-gray-400" />
                 </div>
                 <h3 className="text-2xl font-semibold mb-3 text-gray-800">No facilities found</h3>
-                <p className="text-gray-600 max-w-md mx-auto mb-6">
-                  We couldn't find any facilities matching your criteria. Try adjusting your search filters or browse all available facilities.
-                </p>
+                <div className="text-gray-600 max-w-md mx-auto mb-6">
+                  <p className="mb-3">We couldn't find any facilities matching your search criteria:</p>
+                  <div className="text-sm space-y-1">
+                    {filters.searchTerm && <div>• Search: "{filters.searchTerm}"</div>}
+                    {filters.city && <div>• Location: {filters.city}</div>}
+                    {filters.sportType && <div>• Sport: {sportIcons[filters.sportType]} {filters.sportType}</div>}
+                    {filters.priceRange && <div>• Price: {filters.priceRange}</div>}
+                  </div>
+                  <p className="mt-4">Try adjusting your filters or browse all available facilities.</p>
+                </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Button
                   variant="outline"
-                  onClick={() => setFilters({ city: "", sportType: "", searchTerm: "", priceRange: "" })}
+                  onClick={() => {
+                    const clearedFilters = { 
+                      city: "", 
+                      sportType: "", 
+                      searchTerm: "", 
+                      priceRange: "", 
+                      sortBy: "rating", 
+                      sortOrder: "desc" 
+                    };
+                    setFilters(clearedFilters);
+                    window.history.replaceState({}, '', '/facilities');
+                  }}
                   className="border-gray-300 hover:bg-gray-50"
                 >
                   Clear All Filters

@@ -17,7 +17,7 @@ export interface IStorage {
   updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined>;
 
   // Facility operations
-  getFacilities(filters?: { city?: string; sportType?: string; searchTerm?: string }): Promise<Facility[]>;
+  getFacilities(filters?: { city?: string; sportType?: string; searchTerm?: string; sortBy?: string; sortOrder?: string }): Promise<Facility[]>;
   getFacility(id: string): Promise<Facility | undefined>;
   getFacilitiesByOwner(ownerId: string): Promise<Facility[]>;
   createFacility(facility: InsertFacility): Promise<Facility>;
@@ -86,7 +86,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Facility operations
-  async getFacilities(filters?: { city?: string; sportType?: string; searchTerm?: string }): Promise<Facility[]> {
+  async getFacilities(filters?: { city?: string; sportType?: string; searchTerm?: string; sortBy?: string; sortOrder?: string }): Promise<Facility[]> {
     let conditions = [eq(facilities.isActive, true)];
 
     if (filters?.city) {
@@ -105,7 +105,26 @@ export class DatabaseStorage implements IStorage {
       );
     }
 
-    return await db.select().from(facilities).where(and(...conditions)).orderBy(desc(facilities.rating));
+    // Apply sorting - default to rating desc
+    const sortBy = filters?.sortBy || 'rating';
+    const sortOrder = filters?.sortOrder || 'desc';
+    
+    let orderByClause;
+    switch (sortBy) {
+      case 'rating':
+        orderByClause = sortOrder === 'desc' ? desc(facilities.rating) : asc(facilities.rating);
+        break;
+      case 'price':
+        orderByClause = sortOrder === 'desc' ? desc(facilities.pricePerHour) : asc(facilities.pricePerHour);
+        break;
+      case 'name':
+        orderByClause = sortOrder === 'desc' ? desc(facilities.name) : asc(facilities.name);
+        break;
+      default:
+        orderByClause = desc(facilities.rating);
+    }
+
+    return await db.select().from(facilities).where(and(...conditions)).orderBy(orderByClause);
   }
 
   async getFacility(id: string): Promise<Facility | undefined> {
