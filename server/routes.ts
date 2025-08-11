@@ -1286,6 +1286,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get pending facilities for approval
+  app.get("/api/admin/facilities/pending", authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const facilities = await storage.getPendingFacilities();
+      res.json(facilities);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch pending facilities", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Get all facilities with approval status
+  app.get("/api/admin/facilities/all", authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const facilities = await storage.getAllFacilitiesForAdmin();
+      res.json(facilities);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch all facilities", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Get admin dashboard statistics
+  app.get("/api/admin/dashboard/stats", authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const stats = await storage.getAdminDashboardStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch dashboard stats", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Get recent activity for admin dashboard
+  app.get("/api/admin/dashboard/recent-activity", authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const activity = await storage.getRecentActivity();
+      res.json(activity);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch recent activity", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Get system health status
+  app.get("/api/admin/dashboard/system-health", authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const health = await storage.getSystemHealth();
+      res.json(health);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch system health", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   app.get("/api/admin/bookings", authenticateToken, requireRole(['admin']), async (req: any, res) => {
     try {
       const bookings = await storage.getBookings();
@@ -1364,6 +1414,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       res.status(500).json({ message: "Failed to upload profile image", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Toggle facility visibility (unlist/relist)
+  app.patch("/api/admin/facilities/:id/visibility", authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const { isActive } = req.body;
+      
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: "isActive must be a boolean value" });
+      }
+
+      const updatedFacility = await storage.updateFacility(req.params.id, { isActive });
+      if (updatedFacility) {
+        const action = isActive ? 'relisted' : 'unlisted';
+        res.json({ message: `Facility ${action} successfully`, facility: updatedFacility });
+      } else {
+        res.status(404).json({ message: "Facility not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to toggle facility visibility", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 

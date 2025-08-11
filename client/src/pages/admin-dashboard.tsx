@@ -26,6 +26,8 @@ import {
   LogOut,
   FileText,
   MessageSquare,
+  Clock,
+  Star,
 } from "lucide-react";
 import AdminCharts from "@/components/admin/AdminCharts";
 import FacilityApprovalTab from "@/components/admin/FacilityApprovalTab";
@@ -37,6 +39,10 @@ export default function AdminDashboard() {
   const { user, token } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  // Debug token
+  console.log('AdminDashboard token:', token);
+  console.log('AdminDashboard user:', user);
 
   // User role update mutation
   const updateUserRoleMutation = useMutation({
@@ -128,6 +134,51 @@ export default function AdminDashboard() {
     },
   });
 
+  // Fetch admin dashboard statistics
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
+    queryKey: ["/api/admin/dashboard/stats"],
+    enabled: !!user && !!token && user.role === "admin",
+    queryFn: async () => {
+      const response = await fetch("/api/admin/dashboard/stats", {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to fetch dashboard stats");
+      return response.json();
+    },
+  });
+
+  // Fetch recent activity
+  const { data: recentActivity = [], isLoading: activityLoading } = useQuery({
+    queryKey: ["/api/admin/dashboard/recent-activity"],
+    enabled: !!user && !!token && user.role === "admin",
+    queryFn: async () => {
+      const response = await fetch("/api/admin/dashboard/recent-activity", {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to fetch recent activity");
+      return response.json();
+    },
+  });
+
+  // Fetch system health
+  const { data: systemHealth, isLoading: healthLoading } = useQuery({
+    queryKey: ["/api/admin/dashboard/system-health"],
+    enabled: !!user && !!token && user.role === "admin",
+    queryFn: async () => {
+      const response = await fetch("/api/admin/dashboard/system-health", {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to fetch system health");
+      return response.json();
+    },
+  });
+
   if (!user || user.role !== "admin") {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -148,13 +199,14 @@ export default function AdminDashboard() {
     );
   }
 
-  const totalUsers = users.length;
-  const totalFacilities = facilities.length;
-  const totalBookings = bookings.length;
+  // Use real data from API if available, fallback to calculated values
+  const totalUsers = dashboardStats?.totalUsers || users.length;
+  const totalFacilityOwners = dashboardStats?.facilityOwners || 0;
+  const totalBookings = dashboardStats?.totalBookings || bookings.length;
   const totalMatches = matches.length;
 
-  const activeFacilities = facilities.filter((f: any) => f.isActive).length;
-  const thisMonthBookings = bookings.filter((booking: any) => {
+  const activeCourts = dashboardStats?.activeCourts || facilities.filter((f: any) => f.isActive).length;
+  const thisMonthBookings = dashboardStats?.thisMonthBookings || bookings.filter((booking: any) => {
     const bookingDate = new Date(booking.createdAt);
     const now = new Date();
     return bookingDate.getMonth() === now.getMonth() && 
@@ -200,16 +252,24 @@ export default function AdminDashboard() {
               <p className="text-gray-600 mt-2">Manage facilities, users, and platform analytics</p>
             </div>
             <div className="flex items-center space-x-3">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard/stats"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard/recent-activity"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard/system-health"] });
+                }}
+                disabled={statsLoading || activityLoading || healthLoading}
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                {(statsLoading || activityLoading || healthLoading) ? "Refreshing..." : "Refresh All"}
+              </Button>
               <Link href="/profile">
                 <Button variant="outline">
                   <User className="w-4 h-4 mr-2" />
                   My Profile
                 </Button>
               </Link>
-              <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
-                <Download className="w-4 h-4 mr-2" />
-                Export Data
-              </Button>
             </div>
           </div>
         </div>
@@ -267,7 +327,13 @@ export default function AdminDashboard() {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
-                      <dd className="text-2xl font-bold text-gray-900">1,247</dd>
+                      <dd className="text-2xl font-bold text-gray-900">
+                        {statsLoading ? (
+                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        ) : (
+                          totalUsers.toLocaleString()
+                        )}
+                      </dd>
                     </div>
                   </div>
                 </CardContent>
@@ -283,7 +349,13 @@ export default function AdminDashboard() {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dt className="text-sm font-medium text-gray-500 truncate">Facility Owners</dt>
-                      <dd className="text-2xl font-bold text-gray-900">89</dd>
+                      <dd className="text-2xl font-bold text-gray-900">
+                        {statsLoading ? (
+                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        ) : (
+                          totalFacilityOwners.toLocaleString()
+                        )}
+                      </dd>
                     </div>
                   </div>
                 </CardContent>
@@ -299,7 +371,13 @@ export default function AdminDashboard() {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dt className="text-sm font-medium text-gray-500 truncate">Total Bookings</dt>
-                      <dd className="text-2xl font-bold text-gray-900">3,456</dd>
+                      <dd className="text-2xl font-bold text-gray-900">
+                        {statsLoading ? (
+                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        ) : (
+                          totalBookings.toLocaleString()
+                        )}
+                      </dd>
                     </div>
                   </div>
                 </CardContent>
@@ -315,11 +393,90 @@ export default function AdminDashboard() {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dt className="text-sm font-medium text-gray-500 truncate">Active Courts</dt>
-                      <dd className="text-2xl font-bold text-gray-900">156</dd>
+                      <dd className="text-2xl font-bold text-gray-900">
+                        {statsLoading ? (
+                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        ) : (
+                          activeCourts.toLocaleString()
+                        )}
+                      </dd>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Additional Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <Card className="bg-white border shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="p-3 bg-amber-100 rounded-lg">
+                        <Clock className="w-6 h-6 text-amber-600" />
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dt className="text-sm font-medium text-gray-500 truncate">This Month</dt>
+                      <dd className="text-2xl font-bold text-gray-900">
+                        {statsLoading ? (
+                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        ) : (
+                          thisMonthBookings.toLocaleString()
+                        )}
+                      </dd>
+                      <p className="text-xs text-gray-500 mt-1">Bookings</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="p-3 bg-red-100 rounded-lg">
+                        <AlertTriangle className="w-6 h-6 text-red-600" />
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dt className="text-sm font-medium text-gray-500 truncate">Pending</dt>
+                      <dd className="text-2xl font-bold text-gray-900">
+                        {statsLoading ? (
+                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        ) : (
+                          (dashboardStats?.pendingApprovals || 0).toLocaleString()
+                        )}
+                      </dd>
+                      <p className="text-xs text-gray-500 mt-1">Approvals</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="p-3 bg-green-100 rounded-lg">
+                        <TrendingUp className="w-6 h-6 text-green-600" />
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dt className="text-sm font-medium text-gray-500 truncate">Revenue</dt>
+                      <dd className="text-2xl font-bold text-gray-900">
+                        {statsLoading ? (
+                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        ) : (
+                          `₹${(dashboardStats?.totalRevenue || 0).toLocaleString()}`
+                        )}
+                      </dd>
+                      <p className="text-xs text-gray-500 mt-1">Total</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
             </div>
 
             <AdminCharts />
@@ -328,64 +485,164 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
+                  <CardTitle className="flex items-center justify-between">
+                    Recent Activity
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard/recent-activity"] })}
+                      disabled={activityLoading}
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                    </Button>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <p className="text-sm">New facility registered</p>
-                      <span className="text-xs text-gray-500 ml-auto">2 hours ago</span>
+                  {activityLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse"></div>
+                          <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                          <div className="h-3 bg-gray-200 rounded w-20 ml-auto animate-pulse"></div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <p className="text-sm">User reported an issue</p>
-                      <span className="text-xs text-gray-500 ml-auto">4 hours ago</span>
+                  ) : recentActivity.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">No recent activity</p>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <p className="text-sm">Match created</p>
-                      <span className="text-xs text-gray-500 ml-auto">6 hours ago</span>
+                  ) : (
+                    <div className="space-y-4">
+                      {recentActivity.map((activity: any, index: number) => (
+                        <div key={`${activity.type}-${activity.id}-${index}`} className="flex items-center space-x-3">
+                          <div className={`w-2 h-2 rounded-full ${
+                            activity.type === 'facility_registered' ? 'bg-green-500' :
+                            activity.type === 'user_registered' ? 'bg-blue-500' :
+                            activity.type === 'booking_created' ? 'bg-purple-500' :
+                            activity.type === 'match_created' ? 'bg-orange-500' : 'bg-gray-500'
+                          }`}></div>
+                          <p className="text-sm flex-1">
+                            {activity.action}
+                            {activity.name && `: ${activity.name}`}
+                            {activity.title && `: ${activity.title}`}
+                          </p>
+                          <span className="text-xs text-gray-500 ml-auto">{activity.timeAgo}</span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>System Health</CardTitle>
+                  <CardTitle className="flex items-center justify-between">
+                    System Health
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard/system-health"] })}
+                      disabled={healthLoading}
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                    </Button>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Database</span>
-                      <Badge variant="outline" className="bg-green-50 text-green-700">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Healthy
-                      </Badge>
+                  {healthLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
+                          <div className="h-6 bg-gray-200 rounded w-20 animate-pulse"></div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">API Services</span>
-                      <Badge variant="outline" className="bg-green-50 text-green-700">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Healthy
-                      </Badge>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Database</span>
+                        <Badge 
+                          variant="outline" 
+                          className={`${
+                            systemHealth?.database?.status === 'healthy' ? 'bg-green-50 text-green-700 border-green-200' :
+                            systemHealth?.database?.status === 'warning' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            'bg-red-50 text-red-700 border-red-200'
+                          }`}
+                        >
+                          {systemHealth?.database?.status === 'healthy' ? (
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                          ) : systemHealth?.database?.status === 'warning' ? (
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                          ) : (
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                          )}
+                          {systemHealth?.database?.status === 'healthy' ? 'Healthy' :
+                           systemHealth?.database?.status === 'warning' ? 'Warning' : 'Error'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">API Services</span>
+                        <Badge 
+                          variant="outline" 
+                          className={`${
+                            systemHealth?.apiServices?.status === 'healthy' ? 'bg-green-50 text-green-700 border-green-200' :
+                            systemHealth?.apiServices?.status === 'warning' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            'bg-red-50 text-red-700 border-red-200'
+                          }`}
+                        >
+                          {systemHealth?.apiServices?.status === 'healthy' ? (
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                          ) : systemHealth?.apiServices?.status === 'warning' ? (
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                          ) : (
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                          )}
+                          {systemHealth?.apiServices?.status === 'healthy' ? 'Healthy' :
+                           systemHealth?.apiServices?.status === 'warning' ? 'Warning' : 'Error'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Payment Gateway</span>
+                        <Badge 
+                          variant="outline" 
+                          className={`${
+                            systemHealth?.paymentGateway?.status === 'healthy' ? 'bg-green-50 text-green-700 border-green-200' :
+                            systemHealth?.paymentGateway?.status === 'warning' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            'bg-red-50 text-red-700 border-red-200'
+                          }`}
+                        >
+                          {systemHealth?.paymentGateway?.status === 'healthy' ? (
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                          ) : systemHealth?.paymentGateway?.status === 'warning' ? (
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                          ) : (
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                          )}
+                          {systemHealth?.paymentGateway?.status === 'healthy' ? 'Healthy' :
+                           systemHealth?.paymentGateway?.status === 'warning' ? 'Warning' : 'Error'}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Payment Gateway</span>
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                        <AlertTriangle className="w-3 h-3 mr-1" />
-                        Warning
-                      </Badge>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="facility-approval">
-            <FacilityApprovalTab />
+            {token ? (
+              <FacilityApprovalTab token={token} />
+            ) : (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-gray-500">Loading authentication...</div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="owner-approval">
@@ -393,12 +650,22 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="user-management">
-            <UserManagementTab 
-              users={users} 
-              isLoading={usersLoading} 
-              token={token}
-              onUpdateUserRole={(userId, role) => updateUserRoleMutation.mutate({ userId, role })} 
-            />
+            {token ? (
+              <UserManagementTab 
+                users={users} 
+                isLoading={usersLoading} 
+                token={token}
+                onUpdateUserRole={(userId, role) => updateUserRoleMutation.mutate({ userId, role })} 
+              />
+            ) : (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-gray-500">Loading authentication...</div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="reports">

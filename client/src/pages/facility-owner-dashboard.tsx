@@ -36,7 +36,7 @@ export default function FacilityOwnerDashboard() {
   const [facilityToEdit, setFacilityToEdit] = useState<any>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [facilityToDelete, setFacilityToDelete] = useState<any>(null);
-  const [facilityFilter, setFacilityFilter] = useState<"all" | "active" | "inactive">("all");
+  const [facilityFilter, setFacilityFilter] = useState<"all" | "active" | "inactive" | "pending" | "approved" | "rejected">("all");
 
   // Fetch facilities owned by the user
   const { data: facilities = [], isLoading: facilitiesLoading } = useQuery<any[]>({
@@ -305,6 +305,30 @@ export default function FacilityOwnerDashboard() {
                       >
                         Inactive ({facilities.filter((f: any) => !f.isActive).length})
                       </Button>
+                      <Button
+                        variant={facilityFilter === "pending" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFacilityFilter("pending")}
+                        className="text-xs sm:text-sm"
+                      >
+                        Pending ({facilities.filter((f: any) => !f.isApproved && !f.rejectionReason).length})
+                      </Button>
+                      <Button
+                        variant={facilityFilter === "approved" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFacilityFilter("approved")}
+                        className="text-xs sm:text-sm"
+                      >
+                        Approved ({facilities.filter((f: any) => f.isApproved).length})
+                      </Button>
+                      <Button
+                        variant={facilityFilter === "rejected" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFacilityFilter("rejected")}
+                        className="text-xs sm:text-sm"
+                      >
+                        Rejected ({facilities.filter((f: any) => !f.isApproved && f.rejectionReason).length})
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -342,6 +366,9 @@ export default function FacilityOwnerDashboard() {
                         if (facilityFilter === "all") return true;
                         if (facilityFilter === "active") return facility.isActive;
                         if (facilityFilter === "inactive") return !facility.isActive;
+                        if (facilityFilter === "pending") return !facility.isApproved && !facility.rejectionReason;
+                        if (facilityFilter === "approved") return facility.isApproved;
+                        if (facilityFilter === "rejected") return !facility.isApproved && facility.rejectionReason;
                         return true;
                       })
                       .map((facility: any) => (
@@ -519,8 +546,37 @@ function FacilityCard({ facility, onDelete, onToggleStatus, onEdit, isToggling }
               </span>
             </div>
             <p className="text-sm font-medium text-primary mt-1 truncate">
-              ₹{facility.pricePerHour}/hour <span className="text-gray-500">{facility.isActive ? "Active" : "Inactive"}</span>
+              ₹{facility.pricePerHour}/hour
             </p>
+            
+            {/* Approval Status */}
+            <div className="flex items-center space-x-2 mt-1">
+              {facility.isApproved ? (
+                <Badge variant="default" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                  ✓ Approved
+                </Badge>
+              ) : facility.rejectionReason ? (
+                <Badge variant="destructive" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                  ✗ Rejected
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                  ⏳ Pending Approval
+                </Badge>
+              )}
+              
+              <Badge variant={facility.isActive ? "default" : "secondary"} className="text-xs">
+                {facility.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+            
+            {/* Rejection Reason */}
+            {facility.rejectionReason && (
+              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-xs text-red-700 font-medium mb-1">Rejection Reason:</p>
+                <p className="text-xs text-red-600">{facility.rejectionReason}</p>
+              </div>
+            )}
             {/* Operating Hours Display */}
             <div className="flex items-center mt-1 text-xs text-gray-600">
               <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
