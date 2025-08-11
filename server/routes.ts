@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { AuthService } from "./authService";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema } from "@shared/schema";
@@ -96,6 +97,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Login failed", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // OTP-based authentication routes
+  app.post("/api/auth/signup/send-otp", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const result = await AuthService.sendSignupOTP(userData.email, userData);
+      
+      if (result.success) {
+        res.status(200).json({ message: result.message });
+      } else {
+        res.status(400).json({ message: result.message });
+      }
+    } catch (error) {
+      res.status(400).json({ message: "Invalid user data", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.post("/api/auth/signup/verify-otp", async (req, res) => {
+    try {
+      const { email, code, ...userData } = req.body;
+      const result = await AuthService.verifySignupOTP(email, code, userData);
+      
+      if (result.success) {
+        res.status(201).json({
+          message: result.message,
+          user: result.user,
+          token: result.token,
+        });
+      } else {
+        res.status(400).json({ message: result.message });
+      }
+    } catch (error) {
+      res.status(400).json({ message: "Verification failed", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.post("/api/auth/login/send-otp", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const result = await AuthService.sendLoginOTP(email);
+      
+      if (result.success) {
+        res.status(200).json({ message: result.message });
+      } else {
+        res.status(400).json({ message: result.message });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to send login code", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.post("/api/auth/login/verify-otp", async (req, res) => {
+    try {
+      const { email, code } = req.body;
+      if (!email || !code) {
+        return res.status(400).json({ message: "Email and code are required" });
+      }
+
+      const result = await AuthService.verifyLoginOTP(email, code);
+      
+      if (result.success) {
+        res.status(200).json({
+          message: result.message,
+          user: result.user,
+          token: result.token,
+        });
+      } else {
+        res.status(400).json({ message: result.message });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Verification failed", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 

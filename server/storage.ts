@@ -1,8 +1,9 @@
 import { 
-  users, facilities, bookings, matches, matchParticipants, reviews,
+  users, facilities, bookings, matches, matchParticipants, reviews, otpCodes,
   type User, type InsertUser, type Facility, type InsertFacility, 
   type Booking, type InsertBooking, type Match, type InsertMatch,
-  type MatchParticipant, type InsertMatchParticipant, type Review, type InsertReview
+  type MatchParticipant, type InsertMatchParticipant, type Review, type InsertReview,
+  type OtpCode, type InsertOtpCode
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, gte, lte, like, or, count, sql } from "drizzle-orm";
@@ -47,6 +48,12 @@ export interface IStorage {
   // Review operations
   getReviewsByFacility(facilityId: string): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
+
+  // OTP operations
+  createOtpCode(otpCode: InsertOtpCode): Promise<OtpCode>;
+  getValidOtpCode(email: string, code: string, type: string): Promise<OtpCode | undefined>;
+  markOtpCodeAsUsed(id: string): Promise<boolean>;
+  cleanupExpiredOtpCodes(): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -296,6 +303,43 @@ export class DatabaseStorage implements IStorage {
       .where(eq(facilities.id, review.facilityId));
 
     return newReview;
+  }
+
+  // OTP operations
+  async createOtpCode(otpCodeData: InsertOtpCode): Promise<OtpCode> {
+    const [otpCode] = await db.insert(otpCodes).values(otpCodeData).returning();
+    return otpCode;
+  }
+
+  async getValidOtpCode(email: string, code: string, type: string): Promise<OtpCode | undefined> {
+    const [otpCode] = await db
+      .select()
+      .from(otpCodes)
+      .where(
+        and(
+          eq(otpCodes.email, email),
+          eq(otpCodes.code, code),
+          eq(otpCodes.type, type),
+          eq(otpCodes.isUsed, false),
+          gte(otpCodes.expiresAt, new Date())
+        )
+      );
+    return otpCode || undefined;
+  }
+
+  async markOtpCodeAsUsed(id: string): Promise<boolean> {
+    const result = await db
+      .update(otpCodes)
+      .set({ isUsed: true })
+      .where(eq(otpCodes.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async cleanupExpiredOtpCodes(): Promise<boolean> {
+    const result = await db
+      .delete(otpCodes)
+      .where(lte(otpCodes.expiresAt, new Date()));
+    return (result.rowCount || 0) > 0;
   }
 }
 

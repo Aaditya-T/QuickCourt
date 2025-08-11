@@ -20,8 +20,19 @@ export const users = pgTable("users", {
   phone: text("phone"),
   profileImage: text("profile_image"),
   skillLevel: skillLevelEnum("skill_level").default("beginner"),
+  isEmailVerified: boolean("is_email_verified").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const otpCodes = pgTable("otp_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  code: text("code").notNull(),
+  type: text("type").notNull(), // 'signup', 'login', 'password_reset'
+  expiresAt: timestamp("expires_at").notNull(),
+  isUsed: boolean("is_used").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const facilities = pgTable("facilities", {
@@ -166,6 +177,11 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({
   createdAt: true,
 });
 
+export const insertOtpCodeSchema = createInsertSchema(otpCodes).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -179,3 +195,5 @@ export type InsertMatchParticipant = z.infer<typeof insertMatchParticipantSchema
 export type MatchParticipant = typeof matchParticipants.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
+export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;
+export type OtpCode = typeof otpCodes.$inferSelect;

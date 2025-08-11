@@ -93,13 +93,22 @@ export default function Login() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm">
-              <span className="text-gray-600">Don't have an account? </span>
-              <Link href="/signup">
-                <a className="font-medium text-primary hover:text-primary/80">
-                  Sign up
-                </a>
-              </Link>
+            <div className="mt-6 text-center text-sm space-y-2">
+              <div>
+                <Link href="/login-otp">
+                  <a className="font-medium text-blue-600 hover:text-blue-500">
+                    Login with Email Code (OTP)
+                  </a>
+                </Link>
+              </div>
+              <div>
+                <span className="text-gray-600">Don't have an account? </span>
+                <Link href="/signup">
+                  <a className="font-medium text-primary hover:text-primary/80">
+                    Sign up
+                  </a>
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>

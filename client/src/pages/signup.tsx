@@ -238,13 +238,22 @@ export default function Signup() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm">
-              <span className="text-gray-600">Already have an account? </span>
-              <Link href="/login">
-                <a className="font-medium text-primary hover:text-primary/80">
-                  Sign in
-                </a>
-              </Link>
+            <div className="mt-6 text-center text-sm space-y-2">
+              <div>
+                <Link href="/signup-otp">
+                  <a className="font-medium text-blue-600 hover:text-blue-500">
+                    Sign up with Email Verification (OTP)
+                  </a>
+                </Link>
+              </div>
+              <div>
+                <span className="text-gray-600">Already have an account? </span>
+                <Link href="/login">
+                  <a className="font-medium text-primary hover:text-primary/80">
+                    Sign in
+                  </a>
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>
