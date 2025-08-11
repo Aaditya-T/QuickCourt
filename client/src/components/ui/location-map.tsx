@@ -17,12 +17,10 @@ L.Icon.Default.mergeOptions({
 });
 
 interface LocationMapProps {
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
   onLocationChange: (coordinates: { latitude: number; longitude: number }) => void;
+  onZipCodeChange: (zipCode: string) => void;
   initialCoordinates?: { latitude?: string | number | null; longitude?: string | number | null };
+  initialZipCode?: string;
 }
 
 // Map event handler component
@@ -36,17 +34,17 @@ function MapClickHandler({ onLocationChange }: { onLocationChange: (lat: number,
 }
 
 export default function LocationMap({ 
-  address, 
-  city, 
-  state, 
-  zipCode, 
-  onLocationChange, 
-  initialCoordinates 
+  onLocationChange,
+  onZipCodeChange,
+  initialCoordinates,
+  initialZipCode
 }: LocationMapProps) {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([19.0760, 72.8777]); // Default to Mumbai
   const [mapZoom, setMapZoom] = useState(13);
+  const [zipCode, setZipCode] = useState(initialZipCode || '');
+  const [showMap, setShowMap] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
 
   // Initialize coordinates from props
@@ -60,16 +58,14 @@ export default function LocationMap({
     }
   }, [initialCoordinates]);
 
-  const geocodeAddress = async () => {
-    if (!address && !city && !zipCode) return;
+  const geocodeZipCode = async (pincode: string) => {
+    if (!pincode) return;
 
     setIsGeocoding(true);
     
-    const query = [address, city, state, zipCode].filter(Boolean).join(', ');
-    
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pincode)}&countrycodes=in&limit=1`
       );
       
       const data = await response.json();
@@ -79,17 +75,16 @@ export default function LocationMap({
         const latitude = parseFloat(lat);
         const longitude = parseFloat(lon);
         
-        setCoordinates({ lat: latitude, lng: longitude });
         setMapCenter([latitude, longitude]);
-        setMapZoom(15);
-        onLocationChange({ latitude, longitude });
+        setMapZoom(13);
+        setShowMap(true);
         
         // Update map view if it exists
         if (mapRef.current) {
-          mapRef.current.setView([latitude, longitude], 15);
+          mapRef.current.setView([latitude, longitude], 13);
         }
       } else {
-        console.warn('No geocoding results found');
+        console.warn('No geocoding results found for pincode');
       }
     } catch (error) {
       console.error('Geocoding error:', error);
@@ -125,16 +120,18 @@ export default function LocationMap({
     }
   };
 
-  // Auto-geocode when address fields change
-  useEffect(() => {
-    if (address || city || zipCode) {
-      const timeoutId = setTimeout(() => {
-        geocodeAddress();
-      }, 1000); // Debounce geocoding calls
-
-      return () => clearTimeout(timeoutId);
+  // Handle zip code input changes
+  const handleZipCodeChange = (value: string) => {
+    setZipCode(value);
+    onZipCodeChange(value);
+    
+    // Auto-geocode when zip code has 6 digits (Indian pincode format)
+    if (value.length === 6) {
+      geocodeZipCode(value);
+    } else {
+      setShowMap(false);
     }
-  }, [address, city, zipCode]);
+  };
 
   return (
     <Card>
@@ -146,27 +143,25 @@ export default function LocationMap({
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="text-sm text-gray-600">
-          Enter your address details and click on the map to set your facility's exact location. The map will automatically center based on your zip code/city.
+          Enter your pincode to view the map of that area, then click on the map to set your facility's exact location.
         </div>
         
-        {/* Geocoding Section */}
-        <div className="space-y-3">
+        {/* Pincode Input Section */}
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="pincode">Pincode</Label>
+            <Input
+              id="pincode"
+              type="text"
+              maxLength={6}
+              value={zipCode}
+              onChange={(e) => handleZipCodeChange(e.target.value.replace(/\D/g, ''))}
+              placeholder="Enter 6-digit pincode (e.g., 400001)"
+              className="mt-1"
+            />
+          </div>
+          
           <div className="flex gap-2">
-            <Button 
-              onClick={geocodeAddress} 
-              disabled={isGeocoding || (!address && !city && !zipCode)}
-              size="sm"
-              variant="outline"
-              className="flex-shrink-0"
-            >
-              {isGeocoding ? (
-                <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-              ) : (
-                <Search className="w-4 h-4" />
-              )}
-              {isGeocoding ? 'Locating...' : 'Find on Map'}
-            </Button>
-            
             <Button 
               onClick={getCurrentLocation} 
               size="sm"
@@ -179,33 +174,56 @@ export default function LocationMap({
           </div>
         </div>
 
-        {/* Interactive Map */}
-        <div className="space-y-3">
-          <div 
-            className="w-full h-80 border border-gray-300 rounded-lg overflow-hidden"
-            style={{ minHeight: '320px' }}
-          >
-            <MapContainer
-              center={mapCenter}
-              zoom={mapZoom}
-              style={{ height: '100%', width: '100%' }}
-              ref={mapRef}
+        {/* Interactive Map - Only show when pincode is entered */}
+        {showMap && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <MapPin className="w-4 h-4" />
+              Map for Pincode: {zipCode}
+            </div>
+            <div 
+              className="w-full h-80 border border-gray-300 rounded-lg overflow-hidden"
+              style={{ minHeight: '320px' }}
             >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <MapClickHandler onLocationChange={handleMapClick} />
-              {coordinates && (
-                <Marker position={[coordinates.lat, coordinates.lng]} />
-              )}
-            </MapContainer>
+              <MapContainer
+                center={mapCenter}
+                zoom={mapZoom}
+                style={{ height: '100%', width: '100%' }}
+                ref={mapRef}
+                key={`${mapCenter[0]}-${mapCenter[1]}`} // Force re-render when center changes
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <MapClickHandler onLocationChange={handleMapClick} />
+                {coordinates && (
+                  <Marker position={[coordinates.lat, coordinates.lng]} />
+                )}
+              </MapContainer>
+            </div>
+            
+            <div className="text-xs text-gray-500">
+              <strong>Tip:</strong> Click anywhere on the map to place your facility marker at that exact location.
+            </div>
           </div>
-          
-          <div className="text-xs text-gray-500">
-            <strong>Tip:</strong> Click anywhere on the map to place your facility marker at that exact location.
+        )}
+
+        {/* Show message when no pincode entered */}
+        {!showMap && zipCode.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <MapPin className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <p>Enter a pincode to view the map</p>
           </div>
-        </div>
+        )}
+
+        {/* Show loading when geocoding */}
+        {isGeocoding && (
+          <div className="text-center py-8">
+            <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-gray-600">Loading map for pincode {zipCode}...</p>
+          </div>
+        )}
 
         {/* Current Coordinates Display */}
         {coordinates && (

@@ -187,6 +187,10 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
     }));
   };
 
+  const handleZipCodeChange = (zipCode: string) => {
+    setFormData(prev => ({ ...prev, zipCode }));
+  };
+
   const handleGameCourtChange = (gameId: string, field: 'courtCount' | 'pricePerHour', value: number) => {
     setGameCourts(prev => {
       const existing = prev.find(court => court.gameId === gameId);
@@ -362,25 +366,18 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="state">State *</Label>
-                    <Input
-                      id="state"
-                      value={formData.state}
-                      onChange={(e) => handleInputChange("state", e.target.value)}
-                      placeholder="Enter state"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="zipCode">ZIP Code *</Label>
-                    <Input
-                      id="zipCode"
-                      value={formData.zipCode}
-                      onChange={(e) => handleInputChange("zipCode", e.target.value)}
-                      placeholder="Enter ZIP code"
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="state">State *</Label>
+                  <Input
+                    id="state"
+                    value={formData.state}
+                    onChange={(e) => handleInputChange("state", e.target.value)}
+                    placeholder="Enter state"
+                  />
+                </div>
+
+                <div className="text-sm text-gray-600 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <strong>Note:</strong> Pincode will be entered in the Location tab along with map selection.
                 </div>
               </CardContent>
             </Card>
@@ -388,15 +385,13 @@ export default function FacilityModal({ open, onClose, facility, mode }: Facilit
 
           <TabsContent value="location" className="space-y-6">
             <LocationMap
-              address={formData.address}
-              city={formData.city}
-              state={formData.state}
-              zipCode={formData.zipCode}
               onLocationChange={handleLocationChange}
+              onZipCodeChange={handleZipCodeChange}
               initialCoordinates={{
                 latitude: formData.latitude,
                 longitude: formData.longitude,
               }}
+              initialZipCode={formData.zipCode}
             />
           </TabsContent>
 
