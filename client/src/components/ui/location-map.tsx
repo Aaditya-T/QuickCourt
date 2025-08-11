@@ -65,8 +65,18 @@ export default function LocationMap({
     
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pincode)}&countrycodes=in&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pincode)}&countrycodes=in&limit=1`,
+        {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'QuickCourt/1.0'
+          }
+        }
       );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const data = await response.json();
       
@@ -84,10 +94,12 @@ export default function LocationMap({
           mapRef.current.setView([latitude, longitude], 13);
         }
       } else {
-        console.warn('No geocoding results found for pincode');
+        console.warn('No geocoding results found for pincode:', pincode);
+        setShowMap(false);
       }
     } catch (error) {
-      console.error('Geocoding error:', error);
+      console.error('Geocoding error for pincode:', pincode, error);
+      setShowMap(false);
     } finally {
       setIsGeocoding(false);
     }
@@ -106,6 +118,7 @@ export default function LocationMap({
           setCoordinates({ lat: latitude, lng: longitude });
           setMapCenter([latitude, longitude]);
           setMapZoom(15);
+          setShowMap(true);
           onLocationChange({ latitude, longitude });
           
           // Update map view if it exists
@@ -115,8 +128,15 @@ export default function LocationMap({
         },
         (error) => {
           console.error('Error getting location:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
         }
       );
+    } else {
+      console.error('Geolocation is not supported by this browser.');
     }
   };
 
@@ -226,6 +246,15 @@ export default function LocationMap({
           <div className="text-center py-8">
             <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
             <p className="text-gray-600">Loading map for pincode {zipCode}...</p>
+          </div>
+        )}
+
+        {/* Show error message when geocoding fails */}
+        {!showMap && !isGeocoding && zipCode.length === 6 && (
+          <div className="text-center py-8 text-gray-500">
+            <MapPin className="w-12 h-12 mx-auto mb-4 text-red-300" />
+            <p>Could not find location for pincode {zipCode}</p>
+            <p className="text-sm">Please try a different pincode or use "Use My Location"</p>
           </div>
         )}
 
