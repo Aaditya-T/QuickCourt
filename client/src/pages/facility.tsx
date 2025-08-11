@@ -35,6 +35,8 @@ type Facility = {
   operatingHours: string; // JSON string
   rating: string;
   totalReviews: number;
+  createdAt: string;
+  isActive: boolean;
 };
 
 type Booking = {
@@ -100,7 +102,7 @@ export default function Facility() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  
+
   // Review states
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>("");
@@ -180,7 +182,7 @@ export default function Facility() {
     let openTime = "06:00";
     let closeTime = "23:00";
     let isOpen = true;
-    
+
     if (facility?.operatingHours) {
       try {
         const hours = JSON.parse(facility.operatingHours);
@@ -189,7 +191,7 @@ export default function Facility() {
           .toLowerCase()
           .slice(0, 3);
         const todayHours = hours[today] || hours.monday;
-        
+
         if (todayHours) {
           if (todayHours.closed) {
             isOpen = false;
@@ -212,7 +214,7 @@ export default function Facility() {
   // Helper function to check if a specific date is closed
   const isDateClosed = (date: Date) => {
     if (!facility?.operatingHours) return false;
-    
+
     try {
       const hours = JSON.parse(facility.operatingHours);
       const dayOfWeek = date.toLocaleDateString("en", { weekday: "long" }).toLowerCase().slice(0, 3);
@@ -386,10 +388,10 @@ export default function Facility() {
                       {(facility.images?.length ? facility.images : defaultImages).map((img, idx) => (
                         <CarouselItem key={idx}>
                           <div className="relative">
-                            <img 
-                              src={img} 
-                              alt={`${facility.name} - Image ${idx + 1}`} 
-                              className="w-full h-64 object-cover rounded-xl shadow-lg" 
+                            <img
+                              src={img}
+                              alt={`${facility.name} - Image ${idx + 1}`}
+                              className="w-full h-64 object-cover rounded-xl shadow-lg"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-xl" />
                           </div>
@@ -400,208 +402,248 @@ export default function Facility() {
                     <CarouselNext className="right-2" />
                   </Carousel>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{facility.name}</h1>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="flex items-center bg-yellow-100 px-2 py-1 rounded-full">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{facility.name}</h1>
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="flex items-center bg-yellow-100 px-3 py-1 rounded-full">
                         <Star className="w-4 h-4 text-yellow-500 fill-current mr-1" />
                         <span className="text-sm font-semibold text-yellow-700">{facility.rating}</span>
                       </div>
                       <span className="text-sm text-gray-600">({facility.totalReviews} reviews)</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                      <MapPin className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <div className="font-medium text-gray-900">{facility.address}</div>
-                        <div className="text-gray-600">{facility.city}, {facility.state}</div>
-                      </div>
-                    </div>
-
-                    <div className={`flex items-center gap-2 p-3 rounded-lg ${
-                      isOpen ? 'bg-green-50' : 'bg-red-50'
-                    }`}>
-                      <Clock className={`w-4 h-4 ${isOpen ? 'text-green-600' : 'text-red-600'}`} />
-                      <div>
-                        <div className={`font-medium ${isOpen ? 'text-gray-900' : 'text-red-800'}`}>
-                          {isOpen ? 'Open Today' : 'Closed Today'}
-                        </div>
-                        <div className={`text-sm ${isOpen ? 'text-gray-600' : 'text-red-600'}`}>
-                          {isOpen ? `${openLabel} - ${closeLabel}` : 'Facility is not operating'}
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${isOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <span className={`text-sm font-medium ${isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                          {isOpen ? 'Open' : 'Closed'}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Amenities */}
-                  {facility.amenities?.length > 0 && (
-                    <div>
-                      <div className="text-sm font-semibold text-gray-700 mb-2">Amenities</div>
-                      <div className="flex flex-wrap gap-2">
-                        {facility.amenities.slice(0, 6).map((amenity) => {
-                          const IconComponent = amenityIcons[amenity] || Zap;
-                          return (
-                            <div key={amenity} className="flex items-center gap-1 text-xs text-gray-600 bg-gray-100 rounded-full px-2 py-1">
-                              <IconComponent className="w-3 h-3" />
-                              <span>{amenity}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
+                  {/* Quick Info Row */}
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <MapPin className="w-4 h-4" />
+                      <span>{facility.city}, {facility.state}</span>
                     </div>
-                  )}
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Trophy className="w-4 h-4" />
+                      <span>{facility.sportTypes?.length || 0} sports</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <span className="font-semibold text-blue-600">₹{facility.pricePerHour}/hr</span>
+                    </div>
+                  </div>
+
+                  {/* Facility Info Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Basic Info */}
+                    <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <MapPin className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">Location</h3>
+                            <p className="text-sm text-gray-600">{facility.city}, {facility.state}</p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-700">{facility.address}</p>
+                        <p className="text-sm text-gray-500 mt-1">{facility.zipCode}</p>
+                      </CardContent>
+                    </Card>
+
+                    {/* Operating Status */}
+                    <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className={`p-2 rounded-lg ${isOpen ? 'bg-green-100' : 'bg-red-100'}`}>
+                            <Clock className={`w-5 h-5 ${isOpen ? 'text-green-600' : 'text-red-600'}`} />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">Status</h3>
+                            <p className={`text-sm font-medium ${isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                              {isOpen ? 'Open Today' : 'Closed Today'}
+                            </p>
+                          </div>
+                        </div>
+                        {isOpen && (
+                          <p className="text-sm text-gray-600">{openLabel} - {closeLabel}</p>
+                        )}
+                        <p className="text-sm text-gray-500 mt-1">
+                          {isOpen ? 'Available for booking' : 'Not operating today'}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Facility Description with Map */}
-          {facility.description ? (
-            <div className="max-w-7xl mx-auto px-6 py-4">
-              <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Description Section */}
-                    <div className="lg:col-span-1">
-                      <h2 className="text-xl font-bold text-gray-900 mb-3">About This Facility</h2>
-                      <p className="text-gray-700 leading-relaxed">{facility.description}</p>
-                    </div>
-                    
-                    {/* Map Section - Bigger */}
-                    <div className="lg:col-span-1">
-                      <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <MapPin className="w-5 h-5 text-red-500" />
-                        Facility Location
-                      </h3>
-                      <div className="bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 shadow-inner">
-                        <iframe
-                          src={
-                            facility.latitude && facility.longitude
-                              ? `https://maps.google.com/maps?q=${facility.latitude},${facility.longitude}&t=&z=16&ie=UTF8&iwloc=&output=embed`
-                              : `https://maps.google.com/maps?q=${encodeURIComponent(`${facility.address}, ${facility.city}, ${facility.state}`)}&t=&z=15&ie=UTF8&iwloc=&output=embed`
-                          }
-                          width="100%"
-                          height="350"
-                          frameBorder="0"
-                          style={{ border: 0 }}
-                          allowFullScreen={false}
-                          loading="lazy"
-                          title="Facility Location"
-                          className="w-full h-80"
-                        />
-                      </div>
-                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="flex items-start gap-3">
-                          <MapPin className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
-                          <div className="flex-1">
-                            <div className="text-sm font-semibold text-gray-900 mb-1">{facility.name}</div>
-                            <div className="text-sm font-medium text-gray-900">{facility.address}</div>
-                            <div className="text-sm text-gray-600 mb-3">{facility.city}, {facility.state} {facility.zipCode}</div>
-                            {facility.latitude && facility.longitude && (
-                              <div className="text-xs text-gray-500 mb-3">
-                                📍 {parseFloat(facility.latitude).toFixed(6)}, {parseFloat(facility.longitude).toFixed(6)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            const query = facility.latitude && facility.longitude
-                              ? `${facility.latitude},${facility.longitude}`
-                              : `${facility.address}, ${facility.city}, ${facility.state}`;
-                            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-                            window.open(googleMapsUrl, '_blank');
-                          }}
-                          className="w-full text-sm bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md font-medium"
-                        >
-                          <MapPin className="w-4 h-4" />
-                          Get Directions on Google Maps
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            /* Map only section for facilities without description */
-            <div className="max-w-7xl mx-auto px-6 py-4">
-              <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Facility Details - Compact Layout */}
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column - Main Info & Description */}
+              <div className="lg:col-span-2 space-y-6">
+
+                {/* Sports & Pricing */}
+                <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-purple-600" />
+                      Sports & Pricing
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Sports Available */}
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <MapPin className="w-5 h-5 text-red-500" />
-                        Facility Location
-                      </h2>
-                      <div className="bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 shadow-inner">
-                        <iframe
-                          src={
-                            facility.latitude && facility.longitude
-                              ? `https://maps.google.com/maps?q=${facility.latitude},${facility.longitude}&t=&z=16&ie=UTF8&iwloc=&output=embed`
-                              : `https://maps.google.com/maps?q=${encodeURIComponent(`${facility.address}, ${facility.city}, ${facility.state}`)}&t=&z=15&ie=UTF8&iwloc=&output=embed`
-                          }
-                          width="100%"
-                          height="350"
-                          frameBorder="0"
-                          style={{ border: 0 }}
-                          allowFullScreen={false}
-                          loading="lazy"
-                          title="Facility Location"
-                          className="w-full h-80"
-                        />
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Available Sports</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {facility.sportTypes?.map((sport: string) => (
+                          <Badge
+                            key={sport}
+                            variant="secondary"
+                            className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-0"
+                          >
+                            {sportIcons[sport]} {sportTypeLabels[sport] || sport}
+                          </Badge>
+                        ))}
                       </div>
                     </div>
-                    <div className="flex flex-col justify-center">
-                      <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="flex items-start gap-3 mb-4">
-                          <MapPin className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
-                          <div className="flex-1">
-                            <div className="text-lg font-semibold text-gray-900 mb-2">{facility.name}</div>
-                            <div className="text-sm font-medium text-gray-900">{facility.address}</div>
-                            <div className="text-sm text-gray-600 mb-3">{facility.city}, {facility.state} {facility.zipCode}</div>
-                            {facility.latitude && facility.longitude && (
-                              <div className="text-xs text-gray-500 mb-3">
-                                📍 Coordinates: {parseFloat(facility.latitude).toFixed(6)}, {parseFloat(facility.longitude).toFixed(6)}
-                              </div>
-                            )}
-                          </div>
+
+                    {/* Pricing */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-200">
+                        <div className="text-sm font-medium text-gray-700 mb-1">Base Price</div>
+                        <div className="text-2xl font-bold text-blue-600">₹{facility.pricePerHour}</div>
+                        <div className="text-xs text-gray-500">per hour</div>
+                      </div>
+                      <div className="bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded-lg border border-green-200">
+                        <div className="text-sm font-medium text-gray-700 mb-1">Rating</div>
+                        <div className="text-2xl font-bold text-green-600">{facility.rating}</div>
+                        <div className="text-xs text-gray-500">({facility.totalReviews} reviews)</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Description */}
+                {facility.description && (
+                  <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-green-600" />
+                        About This Facility
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 leading-relaxed">{facility.description}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Amenities */}
+                {facility.amenities?.length > 0 && (
+                  <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-yellow-600" />
+                        Amenities
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {facility.amenities.map((amenity) => {
+                          const IconComponent = amenityIcons[amenity] || Zap;
+                          return (
+                            <div key={amenity} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                              <IconComponent className="w-4 h-4 text-gray-600" />
+                              <span className="text-sm text-gray-700">{amenity}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Right Column - Map & Quick Actions */}
+              <div className="lg:col-span-1 space-y-6">
+                {/* Map Card */}
+                <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-red-500" />
+                      Location
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                      <iframe
+                        src={
+                          facility.latitude && facility.longitude
+                            ? `https://maps.google.com/maps?q=${facility.latitude},${facility.longitude}&t=&z=16&ie=UTF8&iwloc=&output=embed`
+                            : `https://maps.google.com/maps?q=${encodeURIComponent(`${facility.address}, ${facility.city}, ${facility.state}`)}&t=&z=15&ie=UTF8&iwloc=&output=embed`
+                        }
+                        width="100%"
+                        height="250"
+                        frameBorder="0"
+                        style={{ border: 0 }}
+                        allowFullScreen={false}
+                        loading="lazy"
+                        title="Facility Location"
+                      />
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div className="text-sm">
+                        <div className="font-semibold text-gray-900 mb-1">{facility.name}</div>
+                        <div className="text-gray-600">{facility.address}</div>
+                        <div className="text-gray-500">{facility.city}, {facility.state} {facility.zipCode}</div>
+                      </div>
+                      {facility.latitude && facility.longitude && (
+                        <div className="text-xs text-gray-500">
+                          Coordinates: {facility.latitude}, {facility.longitude}
                         </div>
-                        <button
-                          onClick={() => {
-                            const query = facility.latitude && facility.longitude
-                              ? `${facility.latitude},${facility.longitude}`
-                              : `${facility.address}, ${facility.city}, ${facility.state}`;
-                            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-                            window.open(googleMapsUrl, '_blank');
-                          }}
-                          className="w-full text-sm bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md font-medium"
-                        >
-                          <MapPin className="w-5 h-5" />
-                          Get Directions on Google Maps
-                        </button>
-                      </div>
+                      )}
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => {
+                          const url = facility.latitude && facility.longitude
+                            ? `https://maps.google.com/maps?q=${facility.latitude},${facility.longitude}`
+                            : `https://maps.google.com/maps?q=${encodeURIComponent(`${facility.address}, ${facility.city}, ${facility.state}`)}`;
+                          window.open(url, '_blank');
+                        }}
+                      >
+                        <MapPin className="w-4 h-4 mr-2" />
+                        Get Directions
+                      </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+
+              </div>
             </div>
-          )}
+          </div>
 
           {/* Main Booking Interface - Compact Layout */}
           <div className="max-w-7xl mx-auto px-6 py-6">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Book Your Court</h2>
+              <p className="text-gray-600">Select your preferred sport, date, and time slots to make a reservation</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
               {/* Left Panel - Booking Controls */}
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-2">
                 <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      
+
                       {/* Sports Selection */}
                       <div>
                         <Label className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
@@ -612,16 +654,15 @@ export default function Facility() {
                           {facility.sportTypes.map((sport) => {
                             const isSelected = selectedSport === sport;
                             const basePrice = parseFloat(facility.pricePerHour);
-                            
+
                             return (
                               <div
                                 key={sport}
                                 onClick={() => setSelectedSport(sport)}
-                                className={`cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 ${
-                                  isSelected 
-                                    ? "border-blue-500 bg-blue-50 shadow-md" 
-                                    : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
-                                }`}
+                                className={`cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 ${isSelected
+                                  ? "border-blue-500 bg-blue-50 shadow-md"
+                                  : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
+                                  }`}
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
@@ -652,7 +693,7 @@ export default function Facility() {
                           </p>
                         </div>
                       )}
-                      
+
                       <div>
                         <Label className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <CalendarIcon className="w-4 h-4 text-green-600" />
@@ -675,8 +716,8 @@ export default function Facility() {
                               closed: (date) => isDateClosed(date)
                             }}
                             modifiersStyles={{
-                              closed: { 
-                                backgroundColor: '#fef2f2', 
+                              closed: {
+                                backgroundColor: '#fef2f2',
                                 color: '#dc2626',
                                 textDecoration: 'line-through'
                               }
@@ -688,7 +729,7 @@ export default function Facility() {
                             📅 {format(selectedDate, "EEEE, MMM dd, yyyy")}
                           </div>
                         )}
-                        
+
                         {/* Calendar Legend */}
                         <div className="mt-3 text-xs text-gray-600 space-y-1">
                           <div className="flex items-center justify-center gap-4">
@@ -736,24 +777,22 @@ export default function Facility() {
                           <div className="space-y-2 max-h-80 overflow-y-auto">
                             {timeSlots.filter(slot => slot.available).map((slot, idx) => {
                               const isSelected = selectedSlots.some((s) => s.startDate.getTime() === slot.startDate.getTime());
-                              
+
                               return (
                                 <button
                                   key={idx}
                                   type="button"
                                   onClick={() => toggleSlot(slot)}
-                                  className={`w-full flex items-center justify-between p-3 border-2 rounded-lg text-left transition-all duration-200 ${
-                                    isSelected
-                                      ? "border-blue-500 bg-blue-50 shadow-md"
-                                      : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
-                                  }`}
+                                  className={`w-full flex items-center justify-between p-3 border-2 rounded-lg text-left transition-all duration-200 ${isSelected
+                                    ? "border-blue-500 bg-blue-50 shadow-md"
+                                    : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
+                                    }`}
                                 >
                                   <div className="flex items-center gap-2">
-                                    <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
-                                      isSelected
-                                        ? "bg-blue-500 border-blue-500"
-                                        : "border-gray-300 bg-white"
-                                    }`}>
+                                    <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${isSelected
+                                      ? "bg-blue-500 border-blue-500"
+                                      : "border-gray-300 bg-white"
+                                      }`}>
                                       {isSelected && <Check className="h-3 w-3 text-white" />}
                                     </div>
                                     <div>
@@ -779,152 +818,39 @@ export default function Facility() {
                   </CardContent>
                 </Card>
 
-                {/* Reviews Section - Compact */}
-                <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm mt-6">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
+                {/* Right Sidebar - Booking Summary (Static) */}
+                <div className="lg:col-span-1">
+                  <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-blue-50 sticky top-6">
+                    <CardHeader className="pb-3">
                       <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <MessageSquare className="w-5 h-5 text-green-600" />
-                        Reviews ({reviews.length})
+                        <CalendarIcon className="w-5 h-5 text-blue-600" />
+                        Booking Summary
                       </CardTitle>
-                      {user && (
-                        <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="border-blue-300 text-blue-600 hover:bg-blue-50">
-                              Write Review
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Write a Review</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <Label className="text-sm font-medium mb-2 block">Rating</Label>
-                                <div className="flex gap-1">
-                                  {[1, 2, 3, 4, 5].map((star) => (
-                                    <button
-                                      key={star}
-                                      type="button"
-                                      onClick={() => setReviewRating(star)}
-                                      className={`text-2xl ${
-                                        star <= reviewRating ? "text-yellow-400" : "text-gray-300"
-                                      }`}
-                                    >
-                                      ★
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium mb-2 block">Comment</Label>
-                                <Textarea
-                                  placeholder="Share your experience..."
-                                  value={reviewComment}
-                                  onChange={(e) => setReviewComment(e.target.value)}
-                                  rows={4}
-                                />
-                              </div>
-                              <div className="flex gap-2 justify-end">
-                                <Button
-                                  variant="outline"
-                                  onClick={() => setShowReviewDialog(false)}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  onClick={handleSubmitReview}
-                                  disabled={isSubmittingReview || !reviewComment.trim()}
-                                  className="bg-blue-600 hover:bg-blue-700"
-                                >
-                                  {isSubmittingReview ? "Submitting..." : "Submit Review"}
-                                </Button>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    {reviews.length === 0 ? (
-                      <div className="text-center py-6 text-gray-500">
-                        <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                        <p className="text-sm">No reviews yet. Be the first to review!</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3 max-h-60 overflow-y-auto">
-                        {reviews.slice(0, 3).map((review) => (
-                          <div key={review.id} className="p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-start gap-2">
-                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <User className="w-4 h-4 text-blue-600" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-gray-900 text-sm">
-                                    {review.user ? `${review.user.firstName} ${review.user.lastName}` : "Anonymous"}
-                                  </span>
-                                  <div className="flex">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                      <Star
-                                        key={star}
-                                        className={`w-3 h-3 ${
-                                          star <= review.rating ? "text-yellow-400 fill-current" : "text-gray-300"
-                                        }`}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                                <p className="text-gray-700 text-sm">{review.comment}</p>
-                              </div>
-                            </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Quick Info */}
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <div className="text-gray-600 mb-1">Sport</div>
+                          <div className="font-semibold text-gray-900">
+                            {selectedSport ? `${sportIcons[selectedSport]} ${sportTypeLabels[selectedSport]}` : "Select"}
                           </div>
-                        ))}
-                        {reviews.length > 3 && (
-                          <div className="text-center">
-                            <Button variant="outline" size="sm">
-                              View All Reviews
-                            </Button>
+                        </div>
+                        <div className="bg-green-50 p-3 rounded-lg">
+                          <div className="text-gray-600 mb-1">Date</div>
+                          <div className="font-semibold text-gray-900">
+                            {selectedDate ? format(selectedDate, "MMM dd") : "Pick"}
                           </div>
-                        )}
+                        </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
 
-              {/* Right Sidebar - Booking Summary (Static) */}
-              <div className="lg:col-span-1">
-                <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-blue-50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg font-bold text-gray-900">Booking Summary</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="text-sm space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Sport:</span>
-                        <span className="font-semibold">
-                          {selectedSport ? `${sportIcons[selectedSport]} ${sportTypeLabels[selectedSport]}` : "-"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Date:</span>
-                        <span className="font-semibold">
-                          {selectedDate ? format(selectedDate, "MMM dd") : "-"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Selected slots:</span>
-                        <span className="font-semibold text-blue-600">{selectedSlots.length}</span>
-                      </div>
-                      
+                      {/* Selected Slots */}
                       {selectedSlots.length > 0 && (
-                        <div className="border-t pt-3 space-y-2">
-                          <div className="text-xs text-gray-500 mb-2">Time slots:</div>
-                          <div className="max-h-32 overflow-y-auto space-y-1">
+                        <div className="bg-white p-3 rounded-lg border border-gray-200">
+                          <div className="text-sm font-medium text-gray-700 mb-2">Selected Slots ({selectedSlots.length})</div>
+                          <div className="space-y-2 max-h-32 overflow-y-auto">
                             {selectedSlots.map((slot, idx) => (
-                              <div key={idx} className="flex justify-between text-xs bg-blue-50 p-2 rounded">
+                              <div key={idx} className="flex justify-between items-center text-xs bg-blue-50 p-2 rounded">
                                 <span>{slot.startTimeLabel} - {format(slot.endDate, "HH:mm")}</span>
                                 <span className="font-semibold">₹{slot.totalPrice}</span>
                               </div>
@@ -932,52 +858,192 @@ export default function Facility() {
                           </div>
                         </div>
                       )}
-                      
-                      <div className="border-t pt-3">
-                        <div className="flex justify-between items-center text-base">
+
+                      {/* Total */}
+                      <div className="bg-gradient-to-r from-blue-100 to-purple-100 p-4 rounded-lg border border-blue-200">
+                        <div className="flex justify-between items-center text-lg">
                           <span className="font-semibold text-gray-900">Total:</span>
-                          <span className="font-bold text-xl text-blue-600">₹{totalSelectedAmount}</span>
+                          <span className="font-bold text-2xl text-blue-600">₹{totalSelectedAmount}</span>
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          {selectedSlots.length > 0 ? `${selectedSlots.length} slot${selectedSlots.length > 1 ? 's' : ''}` : 'No slots selected'}
                         </div>
                       </div>
-                    </div>
-                    
-                    <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg" 
-                      disabled={selectedSlots.length === 0 || isProcessing || !isOpen} 
-                      onClick={proceedToCheckout}
-                    >
-                      {isProcessing ? (
-                        <div className="flex items-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          Processing...
+
+                      {/* Action Button */}
+                      <Button
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg h-12 text-base font-semibold"
+                        disabled={selectedSlots.length === 0 || isProcessing || !isOpen}
+                        onClick={proceedToCheckout}
+                      >
+                        {isProcessing ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Processing...
+                          </div>
+                        ) : !isOpen ? (
+                          "Facility Closed"
+                        ) : selectedSlots.length === 0 ? (
+                          "Select Time Slots"
+                        ) : (
+                          `Book Now - ₹${totalSelectedAmount}`
+                        )}
+                      </Button>
+
+                      {/* Status Messages */}
+                      {!isOpen && (
+                        <div className="text-center p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-xs text-red-600 font-medium">
+                            ⚠️ Facility is closed on this date
+                          </p>
                         </div>
-                      ) : !isOpen ? (
-                        "Facility Closed"
-                      ) : selectedSlots.length === 0 ? (
-                        "Select Time Slots"
-                      ) : (
-                        `Book Now - ₹${totalSelectedAmount}`
                       )}
-                    </Button>
-                    
-                    {!isOpen && (
-                      <p className="text-xs text-red-500 text-center">
-                        Cannot book - facility is closed on this date
-                      </p>
-                    )}
-                    
-                    {selectedSlots.length === 0 && isOpen && (
-                      <p className="text-xs text-gray-500 text-center">
-                        Select time slots to proceed
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+
+                      {selectedSlots.length === 0 && isOpen && (
+                        <div className="text-center p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                          <p className="text-xs text-gray-600">
+                            Select time slots to proceed with booking
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
+
+              {/* Reviews Section - Compact */}
+              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm mt-6">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-green-600" />
+                      Reviews ({reviews.length})
+                    </CardTitle>
+                    {user && (
+                      <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="border-blue-300 text-blue-600 hover:bg-blue-50">
+                            Write Review
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Write a Review</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Rating</Label>
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setReviewRating(star)}
+                                    className={`text-2xl ${star <= reviewRating ? "text-yellow-400" : "text-gray-300"
+                                      }`}
+                                  >
+                                    ★
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Comment</Label>
+                              <Textarea
+                                placeholder="Share your experience..."
+                                value={reviewComment}
+                                onChange={(e) => setReviewComment(e.target.value)}
+                                rows={4}
+                              />
+                            </div>
+                            <Button
+                              onClick={handleSubmitReview}
+                              disabled={reviewRating === 0 || reviewComment.trim() === ""}
+                              className="w-full"
+                            >
+                              Submit Review
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {reviews.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p className="text-lg font-medium text-gray-600 mb-2">No reviews yet</p>
+                      <p className="text-sm text-gray-500">Be the first to share your experience!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Review Stats */}
+                      <div className="flex items-center gap-6 p-4 bg-gray-50 rounded-lg">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-900">{facility.rating}</div>
+                          <div className="text-sm text-gray-600">Average Rating</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-900">{reviews.length}</div>
+                          <div className="text-sm text-gray-600">Total Reviews</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-900">
+                            {reviews.filter(r => r.rating >= 4).length}
+                          </div>
+                          <div className="text-sm text-gray-600">Positive Reviews</div>
+                        </div>
+                      </div>
+
+                      {/* Reviews List */}
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {reviews.slice(0, 6).map((review) => (
+                          <div key={review.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <User className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {review.user?.firstName} {review.user?.lastName}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {format(new Date(review.createdAt), "MMM dd, yyyy")}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-4 h-4 ${star <= review.rating ? "text-yellow-400 fill-current" : "text-gray-300"
+                                      }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-gray-700 text-sm">{review.comment}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {reviews.length > 6 && (
+                        <div className="text-center pt-2">
+                          <Button variant="outline" size="sm">
+                            View All {reviews.length} Reviews
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </>
       )}
     </div>
-  );
+  )
 }
