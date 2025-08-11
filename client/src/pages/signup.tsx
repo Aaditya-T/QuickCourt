@@ -71,13 +71,26 @@ export default function Signup() {
       return await apiRequest("/api/auth/signup/verify-otp", "POST", data);
     },
     onSuccess: (response: any) => {
+      // Use the same localStorage keys as the auth system
+      localStorage.setItem("quickcourt_token", response.token);
+      localStorage.setItem("quickcourt_user", JSON.stringify(response.user));
+      
       toast({
-        title: "Account Created Successfully",
-        description: "Your account has been verified. Please log in to continue.",
+        title: "Account Created",
+        description: "Welcome to QuickCourt! You're now logged in.",
       });
       
-      // Redirect to login page
-      setLocation("/login");
+      // Redirect based on role
+      switch (response.user.role) {
+        case "facility_owner":
+          setLocation("/facility-owner");
+          break;
+        case "admin":
+          setLocation("/admin");
+          break;
+        default:
+          setLocation("/dashboard");
+      }
     },
     onError: (error: any) => {
       toast({
