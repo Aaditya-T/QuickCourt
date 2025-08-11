@@ -171,10 +171,10 @@ export default function FacilityOwnerDashboard() {
                 Manage your facilities and track your business performance
               </p>
             </div>
-            <Button onClick={() => setCreateFacilityModalOpen(true)} className="w-full sm:w-auto">
+            {/* <Button onClick={() => setCreateFacilityModalOpen(true)} className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Add Facility
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>
@@ -518,6 +518,29 @@ function FacilityCard({ facility, onDelete, onToggleStatus, onEdit, isToggling }
             <p className="text-sm font-medium text-primary mt-1 truncate">
               ₹{facility.pricePerHour}/hour <span className="text-gray-500">{facility.isActive ? "Active" : "Inactive"}</span>
             </p>
+            {/* Operating Hours Display */}
+            <div className="flex items-center mt-1 text-xs text-gray-600">
+              <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+              <span className="truncate">
+                {(() => {
+                  try {
+                    const hours = JSON.parse(facility.operatingHours);
+                    const today = new Date().toLocaleDateString('en', { weekday: 'long' }).toLowerCase().slice(0, 3);
+                    const todayHours = hours[today] || hours.monday;
+                    if (todayHours) {
+                      if (todayHours.closed) {
+                        return "Today: Closed";
+                      } else {
+                        return `Today: ${todayHours.open} - ${todayHours.close}`;
+                      }
+                    }
+                  } catch {
+                    // fallback for simple string format
+                  }
+                  return "Hours: 6:00 AM - 11:00 PM";
+                })()}
+              </span>
+            </div>
             {/* <div className="flex justify-center sm:justify-start">
               <Badge variant={facility.isActive ? "default" : "secondary"}>
                 {facility.isActive ? "Active" : "Inactive"}
