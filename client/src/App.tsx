@@ -18,6 +18,8 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
 import StripePayment from "@/pages/stripe-payment";
 import PaymentSuccess from "@/pages/payment-success";
+import PaymentCheckout from "@/pages/payment-checkout";
+import Bookings from "@/pages/bookings";
 
 function Router() {
   return (
@@ -45,6 +47,11 @@ function Router() {
           <Dashboard />
         </RouteGuard>
       </Route>
+      <Route path="/bookings">
+        <RouteGuard allowedRoles={["user", "admin"]}>
+          <Bookings />
+        </RouteGuard>
+      </Route>
       <Route path="/facility-owner">
         <RouteGuard allowedRoles={["facility_owner"]}>
           <FacilityOwnerDashboard />
@@ -63,6 +70,11 @@ function Router() {
       <Route path="/payment-success">
         <RouteGuard allowedRoles={["user"]}>
           <PaymentSuccess />
+        </RouteGuard>
+      </Route>
+      <Route path="/payment-checkout">
+        <RouteGuard allowedRoles={["user", "facility_owner", "admin"]}>
+          <PaymentCheckout />
         </RouteGuard>
       </Route>
       <Route component={NotFound} />

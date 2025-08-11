@@ -10,8 +10,6 @@ import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatc
 import multer from "multer";
 import { imageUploadService } from "./imageUploadService";
 
-import Stripe from "stripe";
-
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 // Configure multer for file uploads
@@ -365,11 +363,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bookingData = insertBookingSchema.parse({
         ...req.body,
         userId: req.user.userId,
+        status: "pending",
+        paymentStatus: "pending"
       });
       
+      // Create the booking first
       const booking = await storage.createBooking(bookingData);
-      res.status(201).json(booking);
+      
+      // If Stripe is configured and amount > 0, create payment intent
+      if (stripe && parseFloat(booking.totalAmount) > 0) {
+        try {
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(parseFloat(booking.totalAmount) * 100), // Convert to cents
+            currency: "usd",
+            metadata: {
+              bookingId: booking.id,
+              userId: req.user.userId,
+              facilityId: booking.facilityId
+            }
+          });
+
+          // Update booking with payment intent ID
+          const updatedBooking = await storage.updateBooking(booking.id, {
+            paymentIntentId: paymentIntent.id
+          });
+
+          res.status(201).json({
+            ...updatedBooking,
+            clientSecret: paymentIntent.client_secret
+          });
+        } catch (paymentError: any) {
+          // If payment creation fails, still return the booking but with error info
+          console.error('Payment intent creation failed:', paymentError);
+          res.status(201).json({
+            ...booking,
+            paymentError: "Payment processing unavailable. Please contact support."
+          });
+        }
+      } else {
+        // For free bookings or when Stripe is not configured
+        const confirmedBooking = await storage.updateBooking(booking.id, {
+          status: "confirmed",
+          paymentStatus: parseFloat(booking.totalAmount) === 0 ? "not_required" : "pending"
+        });
+        res.status(201).json(confirmedBooking);
+      }
     } catch (error) {
+      console.error('Booking creation error:', error);
       res.status(400).json({ message: "Invalid booking data", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
@@ -680,9 +720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let stripe: Stripe | null = null;
   
   if (process.env.STRIPE_SECRET_KEY) {
-    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16',
-    });
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     console.log('Stripe initialized successfully');
   } else {
     console.log('Stripe credentials not configured. Payment routes will be disabled.');
@@ -756,25 +794,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      if (!stripe) {
+        return res.status(500).json({
+          success: false,
+          message: "Payment gateway not configured properly"
+        });
+      }
+
       // Retrieve the payment intent to check its status
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
       if (paymentIntent.status === 'succeeded') {
-        // Payment was successful
-        console.log('Payment confirmed:', paymentIntentId);
+        // Payment was successful - update booking status
+        const bookingId = paymentIntent.metadata.bookingId;
+        if (bookingId) {
+          await storage.updateBooking(bookingId, {
+            status: "confirmed",
+            paymentStatus: "succeeded"
+          });
+        }
+        
+        console.log('Payment confirmed for booking:', bookingId);
         
         res.json({
           success: true,
           status: paymentIntent.status,
           amount: paymentIntent.amount,
           currency: paymentIntent.currency,
-          metadata: paymentIntent.metadata
+          bookingId: bookingId,
+          message: "Payment successful! Your booking is confirmed."
         });
       } else {
+        // Payment failed or pending - update booking accordingly
+        const bookingId = paymentIntent.metadata.bookingId;
+        if (bookingId) {
+          await storage.updateBooking(bookingId, {
+            paymentStatus: paymentIntent.status === 'canceled' ? 'canceled' : 'failed'
+          });
+        }
+        
         res.json({
           success: false,
           status: paymentIntent.status,
-          message: `Payment status: ${paymentIntent.status}`
+          bookingId: bookingId,
+          message: `Payment ${paymentIntent.status}. Please try again or contact support.`
         });
       }
 
@@ -791,6 +854,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/payment-status/:paymentIntentId", async (req, res) => {
     try {
       const { paymentIntentId } = req.params;
+
+      if (!stripe) {
+        return res.status(500).json({
+          success: false,
+          message: "Payment gateway not configured properly"
+        });
+      }
 
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
