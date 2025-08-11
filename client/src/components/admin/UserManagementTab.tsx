@@ -164,7 +164,7 @@ export default function UserManagementTab({ users, isLoading, onUpdateUserRole }
                   </td>
                   <td className="py-4 px-4">
                     <div className="text-sm text-gray-600">
-                      {user.lastActive}
+                      {user.updatedAt}
                     </div>
                   </td>
                   <td className="py-4 px-4 text-right">
