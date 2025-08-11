@@ -5,7 +5,9 @@ import { AuthService } from "./authService";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
-import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema } from "@shared/schema";
+import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema, bookings } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import multer from "multer";
 import { imageUploadService } from "./imageUploadService";
 
@@ -715,7 +717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { amount, currency = 'inr', metadata = {} } = req.body;
+      const { amount, currency = 'inr', metadata = {}, bookingIds } = req.body;
 
       // Create a PaymentIntent with the order amount and currency
       const paymentIntent = await stripe.paymentIntents.create({
@@ -725,6 +727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transactionId: req.body.transactionId || `txn_${Date.now()}`,
           customerName: req.body.name || 'Guest',
           customerPhone: req.body.number || '',
+          bookingIds: bookingIds || '',
           ...metadata
         },
         automatic_payment_methods: {
@@ -733,6 +736,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       console.log('Payment intent created:', paymentIntent.id);
+
+      // If bookingIds are provided, link them to this payment intent
+      if (bookingIds) {
+        const ids = bookingIds.split(',');
+        for (const bookingId of ids) {
+          if (bookingId.trim()) {
+            try {
+              await storage.updateBookingPaymentIntent(bookingId.trim(), paymentIntent.id);
+              console.log('Linked booking', bookingId.trim(), 'to payment intent', paymentIntent.id);
+            } catch (error) {
+              console.error('Failed to link booking', bookingId.trim(), 'to payment:', error);
+            }
+          }
+        }
+      }
 
       res.json({
         success: true,
@@ -769,6 +787,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (paymentIntent.status === 'succeeded') {
         // Payment was successful
         console.log('Payment confirmed:', paymentIntentId);
+        
+        // Update booking status to completed
+        try {
+          await db.update(bookings)
+            .set({ 
+              stripePaymentStatus: 'completed',
+              status: 'confirmed'
+            })
+            .where(eq(bookings.stripePaymentIntentId, paymentIntentId));
+          
+          console.log('Booking status updated for payment:', paymentIntentId);
+        } catch (dbError) {
+          console.error('Failed to update booking status:', dbError);
+        }
         
         res.json({
           success: true,

@@ -32,6 +32,7 @@ export interface IStorage {
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBooking(id: string, updates: Partial<InsertBooking>): Promise<Booking | undefined>;
   cancelBooking(id: string): Promise<boolean>;
+  updateBookingPaymentIntent(bookingId: string, paymentIntentId: string): Promise<boolean>;
 
   // Match operations
   getMatches(filters?: { city?: string; sportType?: string; skillLevel?: string }): Promise<Match[]>;
@@ -181,6 +182,15 @@ export class DatabaseStorage implements IStorage {
 
   async cancelBooking(id: string): Promise<boolean> {
     const result = await db.update(bookings).set({ status: "cancelled", updatedAt: new Date() }).where(eq(bookings.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async updateBookingPaymentIntent(bookingId: string, paymentIntentId: string): Promise<boolean> {
+    const result = await db.update(bookings).set({ 
+      stripePaymentIntentId: paymentIntentId,
+      stripePaymentStatus: 'pending',
+      updatedAt: new Date() 
+    }).where(eq(bookings.id, bookingId));
     return (result.rowCount || 0) > 0;
   }
 

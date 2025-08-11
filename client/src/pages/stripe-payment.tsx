@@ -46,13 +46,18 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     setIsLoading(true);
 
     try {
+      // Get booking IDs from URL parameters  
+      const urlParams = new URLSearchParams(window.location.search);
+      const bookingIds = urlParams.get('bookingIds') || '';
+      
       // Create payment intent
       const response = await axios.post('/api/create-payment-intent', {
         amount: amount,
         currency: 'inr',
         name: customerName,
         number: customerPhone,
-        transactionId: `txn_${Date.now()}`
+        transactionId: `txn_${Date.now()}`,
+        bookingIds: bookingIds
       });
 
       if (!response.data.success) {
