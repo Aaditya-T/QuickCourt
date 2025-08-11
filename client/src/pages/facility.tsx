@@ -26,6 +26,8 @@ type Facility = {
   city: string;
   state: string;
   zipCode: string;
+  latitude?: string;
+  longitude?: string;
   sportTypes: string[];
   pricePerHour: string; // decimal as string from backend
   images: string[];
@@ -424,13 +426,134 @@ export default function Facility() {
             </div>
           </div>
 
-          {/* Facility Description */}
-          {facility.description && (
+          {/* Facility Description with Map */}
+          {facility.description ? (
             <div className="max-w-7xl mx-auto px-6 py-4">
               <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
                 <CardContent className="p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-3">About This Facility</h2>
-                  <p className="text-gray-700 leading-relaxed">{facility.description}</p>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Description Section */}
+                    <div className="lg:col-span-1">
+                      <h2 className="text-xl font-bold text-gray-900 mb-3">About This Facility</h2>
+                      <p className="text-gray-700 leading-relaxed">{facility.description}</p>
+                    </div>
+                    
+                    {/* Map Section - Bigger */}
+                    <div className="lg:col-span-1">
+                      <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-red-500" />
+                        Facility Location
+                      </h3>
+                      <div className="bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 shadow-inner">
+                        <iframe
+                          src={
+                            facility.latitude && facility.longitude
+                              ? `https://maps.google.com/maps?q=${facility.latitude},${facility.longitude}&t=&z=16&ie=UTF8&iwloc=&output=embed`
+                              : `https://maps.google.com/maps?q=${encodeURIComponent(`${facility.address}, ${facility.city}, ${facility.state}`)}&t=&z=15&ie=UTF8&iwloc=&output=embed`
+                          }
+                          width="100%"
+                          height="350"
+                          frameBorder="0"
+                          style={{ border: 0 }}
+                          allowFullScreen={false}
+                          loading="lazy"
+                          title="Facility Location"
+                          className="w-full h-80"
+                        />
+                      </div>
+                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-start gap-3">
+                          <MapPin className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold text-gray-900 mb-1">{facility.name}</div>
+                            <div className="text-sm font-medium text-gray-900">{facility.address}</div>
+                            <div className="text-sm text-gray-600 mb-3">{facility.city}, {facility.state} {facility.zipCode}</div>
+                            {facility.latitude && facility.longitude && (
+                              <div className="text-xs text-gray-500 mb-3">
+                                📍 {parseFloat(facility.latitude).toFixed(6)}, {parseFloat(facility.longitude).toFixed(6)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const query = facility.latitude && facility.longitude
+                              ? `${facility.latitude},${facility.longitude}`
+                              : `${facility.address}, ${facility.city}, ${facility.state}`;
+                            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+                            window.open(googleMapsUrl, '_blank');
+                          }}
+                          className="w-full text-sm bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md font-medium"
+                        >
+                          <MapPin className="w-4 h-4" />
+                          Get Directions on Google Maps
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            /* Map only section for facilities without description */
+            <div className="max-w-7xl mx-auto px-6 py-4">
+              <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-red-500" />
+                        Facility Location
+                      </h2>
+                      <div className="bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 shadow-inner">
+                        <iframe
+                          src={
+                            facility.latitude && facility.longitude
+                              ? `https://maps.google.com/maps?q=${facility.latitude},${facility.longitude}&t=&z=16&ie=UTF8&iwloc=&output=embed`
+                              : `https://maps.google.com/maps?q=${encodeURIComponent(`${facility.address}, ${facility.city}, ${facility.state}`)}&t=&z=15&ie=UTF8&iwloc=&output=embed`
+                          }
+                          width="100%"
+                          height="350"
+                          frameBorder="0"
+                          style={{ border: 0 }}
+                          allowFullScreen={false}
+                          loading="lazy"
+                          title="Facility Location"
+                          className="w-full h-80"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col justify-center">
+                      <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-start gap-3 mb-4">
+                          <MapPin className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
+                          <div className="flex-1">
+                            <div className="text-lg font-semibold text-gray-900 mb-2">{facility.name}</div>
+                            <div className="text-sm font-medium text-gray-900">{facility.address}</div>
+                            <div className="text-sm text-gray-600 mb-3">{facility.city}, {facility.state} {facility.zipCode}</div>
+                            {facility.latitude && facility.longitude && (
+                              <div className="text-xs text-gray-500 mb-3">
+                                📍 Coordinates: {parseFloat(facility.latitude).toFixed(6)}, {parseFloat(facility.longitude).toFixed(6)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const query = facility.latitude && facility.longitude
+                              ? `${facility.latitude},${facility.longitude}`
+                              : `${facility.address}, ${facility.city}, ${facility.state}`;
+                            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+                            window.open(googleMapsUrl, '_blank');
+                          }}
+                          className="w-full text-sm bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md font-medium"
+                        >
+                          <MapPin className="w-5 h-5" />
+                          Get Directions on Google Maps
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -448,7 +571,7 @@ export default function Facility() {
                       
                       {/* Sports Selection */}
                       <div>
-                        <Label className="text-sm font-bold text-gray-800 mb-3 block flex items-center gap-2">
+                        <Label className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <Trophy className="w-4 h-4 text-blue-600" />
                           Choose Sport
                         </Label>
@@ -484,7 +607,7 @@ export default function Facility() {
 
                       {/* Date Selection */}
                       <div>
-                        <Label className="text-sm font-bold text-gray-800 mb-3 block flex items-center gap-2">
+                        <Label className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <CalendarIcon className="w-4 h-4 text-green-600" />
                           Select Date
                         </Label>
@@ -512,7 +635,7 @@ export default function Facility() {
 
                       {/* Time Slots */}
                       <div>
-                        <Label className="text-sm font-bold text-gray-800 mb-3 block flex items-center gap-2">
+                        <Label className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <Clock className="w-4 h-4 text-purple-600" />
                           Available Slots
                         </Label>

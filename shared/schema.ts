@@ -44,6 +44,8 @@ export const facilities = pgTable("facilities", {
   city: text("city").notNull(),
   state: text("state").notNull(),
   zipCode: text("zip_code").notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
   sportTypes: text("sport_types").array().notNull(),
   pricePerHour: decimal("price_per_hour", { precision: 10, scale: 2 }).notNull(),
   images: text("images").array().default([]),

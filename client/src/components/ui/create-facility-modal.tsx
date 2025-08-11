@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
   BasicInformation,
-  Location,
+  MapLocation,
   OperatingHours,
   Amenities,
   Images,
@@ -29,6 +29,8 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
     city: "",
     state: "",
     zipCode: "",
+    latitude: "",
+    longitude: "",
     sportTypes: [] as string[],
     pricePerHour: "",
     images: [] as string[],
@@ -74,6 +76,8 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
       city: "",
       state: "",
       zipCode: "",
+      latitude: "",
+      longitude: "",
       sportTypes: [],
       pricePerHour: "",
       images: [],
@@ -192,12 +196,14 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
             onSportTypeToggle={handleSportTypeToggle}
           />
 
-          <Location
+          <MapLocation
             formData={{
               address: formData.address,
               city: formData.city,
               state: formData.state,
               zipCode: formData.zipCode,
+              latitude: formData.latitude,
+              longitude: formData.longitude,
             }}
             onFieldChange={handleFieldChange}
           />
