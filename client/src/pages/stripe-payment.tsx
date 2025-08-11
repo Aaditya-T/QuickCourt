@@ -14,7 +14,7 @@ import { useAuth } from '@/lib/auth';
 import axios from 'axios';
 
 // Initialize Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 interface PaymentFormProps {
   amount: number;
@@ -182,6 +182,34 @@ const StripePayment: React.FC = () => {
     console.error('Payment error:', error);
     // Handle error - maybe show error state
   };
+
+  // Check if Stripe key is available
+  if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-red-600">Configuration Error</h1>
+            <p className="mt-2 text-gray-600">Stripe is not properly configured</p>
+          </div>
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="text-red-500 mb-4">
+                <CreditCard className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-xl font-semibold mb-2">Missing Stripe Configuration</h3>
+                <p className="text-red-600 mb-4">
+                  The VITE_STRIPE_PUBLISHABLE_KEY environment variable is not set.
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  Please check your environment configuration and ensure the Stripe publishable key is properly set.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
