@@ -9,10 +9,9 @@ const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'quickcourt-images';
 
-// Use R2.dev URL if available, otherwise fall back to direct R2 URL
+// Use public R2 URL - this should be configured for public access in Cloudflare
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 
-  (process.env.R2_DEV_URL ? `https://${process.env.R2_DEV_URL}.r2.dev` : 
-   `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`);
+  `https://pub-${R2_ACCOUNT_ID?.replace(/-/g, '')}.r2.dev`;
 
 console.log('R2 Configuration:', {
   bucketName: R2_BUCKET_NAME,
