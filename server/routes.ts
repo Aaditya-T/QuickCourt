@@ -367,14 +367,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/bookings", authenticateToken, async (req: any, res) => {
     try {
+      // Convert data types to match schema expectations
+      const { date, startTime, endTime, totalAmount, ...restData } = req.body;
+      
       const bookingData = insertBookingSchema.parse({
-        ...req.body,
+        ...restData,
         userId: req.user.userId,
+        date: new Date(date),
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        totalAmount: typeof totalAmount === 'number' ? totalAmount.toString() : totalAmount,
       });
       
       const booking = await storage.createBooking(bookingData);
       res.status(201).json(booking);
     } catch (error) {
+      console.error('Booking creation error:', error);
       res.status(400).json({ message: "Invalid booking data", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
