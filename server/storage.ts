@@ -91,7 +91,8 @@ export class DatabaseStorage implements IStorage {
       conditions.push(like(facilities.city, `%${filters.city}%`));
     }
     if (filters?.sportType && filters.sportType !== "all" && filters.sportType !== "") {
-      conditions.push(eq(facilities.sportType, filters.sportType as any));
+      // Use SQL operator to check if the sport type is in the array
+      conditions.push(sql`${filters.sportType} = ANY(${facilities.sportTypes})`);
     }
     if (filters?.searchTerm) {
       conditions.push(
@@ -143,7 +144,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBookingsByFacility(facilityId: string, date?: Date): Promise<Booking[]> {
-    let query = db.select().from(bookings).where(eq(bookings.facilityId, facilityId));
+    let conditions = [eq(bookings.facilityId, facilityId)];
     
     if (date) {
       const startOfDay = new Date(date);
@@ -151,16 +152,13 @@ export class DatabaseStorage implements IStorage {
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
       
-      query = query.where(
-        and(
-          eq(bookings.facilityId, facilityId),
-          gte(bookings.date, startOfDay),
-          lte(bookings.date, endOfDay)
-        )
-      );
+      conditions.push(gte(bookings.date, startOfDay));
+      conditions.push(lte(bookings.date, endOfDay));
     }
 
-    return await query.orderBy(asc(bookings.startTime));
+    return await db.select().from(bookings)
+      .where(and(...conditions))
+      .orderBy(asc(bookings.startTime));
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
@@ -180,7 +178,19 @@ export class DatabaseStorage implements IStorage {
 
   // Match operations
   async getMatches(filters?: { city?: string; sportType?: string; skillLevel?: string }): Promise<Match[]> {
-    let query = db.select({
+    let conditions = [eq(matches.status, "open")];
+    
+    if (filters?.city) {
+      conditions.push(like(facilities.city, `%${filters.city}%`));
+    }
+    if (filters?.sportType && filters.sportType !== "all" && filters.sportType !== "") {
+      conditions.push(eq(matches.sportType, filters.sportType as any));
+    }
+    if (filters?.skillLevel && filters.skillLevel !== "all" && filters.skillLevel !== "") {
+      conditions.push(eq(matches.skillLevel, filters.skillLevel as any));
+    }
+
+    return await db.select({
       id: matches.id,
       creatorId: matches.creatorId,
       facilityId: matches.facilityId,
@@ -201,19 +211,8 @@ export class DatabaseStorage implements IStorage {
       facilityCity: facilities.city,
     }).from(matches)
       .leftJoin(facilities, eq(matches.facilityId, facilities.id))
-      .where(eq(matches.status, "open"));
-
-    if (filters?.city) {
-      query = query.where(like(facilities.city, `%${filters.city}%`));
-    }
-    if (filters?.sportType && filters.sportType !== "all" && filters.sportType !== "") {
-      query = query.where(eq(matches.sportType, filters.sportType as any));
-    }
-    if (filters?.skillLevel && filters.skillLevel !== "all" && filters.skillLevel !== "") {
-      query = query.where(eq(matches.skillLevel, filters.skillLevel as any));
-    }
-
-    return await query.orderBy(asc(matches.date));
+      .where(and(...conditions))
+      .orderBy(asc(matches.date));
   }
 
   async getMatch(id: string): Promise<Match | undefined> {

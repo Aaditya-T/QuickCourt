@@ -44,7 +44,7 @@ export const facilities = pgTable("facilities", {
   city: text("city").notNull(),
   state: text("state").notNull(),
   zipCode: text("zip_code").notNull(),
-  sportType: sportTypeEnum("sport_type").notNull(),
+  sportTypes: text("sport_types").array().notNull(),
   pricePerHour: decimal("price_per_hour", { precision: 10, scale: 2 }).notNull(),
   images: text("images").array().default([]),
   amenities: text("amenities").array().default([]),

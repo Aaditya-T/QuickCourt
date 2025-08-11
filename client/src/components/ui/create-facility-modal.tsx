@@ -34,7 +34,7 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
     city: "",
     state: "",
     zipCode: "",
-    sportType: "",
+    sportTypes: [] as string[],
     pricePerHour: "",
     images: [] as string[],
     amenities: [] as string[],
@@ -81,7 +81,7 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
       city: "",
       state: "",
       zipCode: "",
-      sportType: "",
+      sportTypes: [],
       pricePerHour: "",
       images: [],
       amenities: [],
@@ -101,6 +101,15 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSportTypeToggle = (sportType: string) => {
+    setFormData(prev => ({
+      ...prev,
+      sportTypes: prev.sportTypes.includes(sportType)
+        ? prev.sportTypes.filter(type => type !== sportType)
+        : [...prev.sportTypes, sportType]
+    }));
   };
 
   const addAmenity = () => {
@@ -144,6 +153,15 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
       toast({
         title: "Permission Denied",
         description: "You must be a facility owner to create facilities.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.sportTypes.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one sport type.",
         variant: "destructive",
       });
       return;
@@ -193,20 +211,33 @@ export default function CreateFacilityModal({ open, onClose, onFacilityCreated }
             </div>
 
             <div>
-              <Label htmlFor="sportType">Sport Type *</Label>
-              <Select value={formData.sportType} onValueChange={(value) => handleChange("sportType", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select sport type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="badminton">Badminton</SelectItem>
-                  <SelectItem value="tennis">Tennis</SelectItem>
-                  <SelectItem value="basketball">Basketball</SelectItem>
-                  <SelectItem value="football">Football</SelectItem>
-                  <SelectItem value="table_tennis">Table Tennis</SelectItem>
-                  <SelectItem value="squash">Squash</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Sport Types *</Label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {[
+                  { value: "badminton", label: "Badminton" },
+                  { value: "tennis", label: "Tennis" },
+                  { value: "basketball", label: "Basketball" },
+                  { value: "football", label: "Football" },
+                  { value: "table_tennis", label: "Table Tennis" },
+                  { value: "squash", label: "Squash" },
+                ].map((sport) => (
+                  <div key={sport.value} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={sport.value}
+                      checked={formData.sportTypes.includes(sport.value)}
+                      onChange={() => handleSportTypeToggle(sport.value)}
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                    />
+                    <Label htmlFor={sport.value} className="text-sm font-normal">
+                      {sport.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {formData.sportTypes.length === 0 && (
+                <p className="text-sm text-red-500 mt-1">Please select at least one sport type</p>
+              )}
             </div>
 
             <div>

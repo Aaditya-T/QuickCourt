@@ -9,7 +9,7 @@ interface Facility {
   description?: string;
   address: string;
   city: string;
-  sportType: string;
+  sportTypes: string[];
   pricePerHour: string;
   images: string[];
   amenities: string[];
@@ -59,9 +59,18 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
           className="w-full h-48 object-cover"
         />
         <div className="absolute top-2 right-2">
-          <Badge variant="secondary" className="bg-white/90">
-            {sportTypeLabels[facility.sportType] || facility.sportType}
-          </Badge>
+          <div className="flex flex-wrap gap-1">
+            {facility.sportTypes.slice(0, 2).map((sportType) => (
+              <Badge key={sportType} variant="secondary" className="bg-white/90 text-xs">
+                {sportTypeLabels[sportType] || sportType}
+              </Badge>
+            ))}
+            {facility.sportTypes.length > 2 && (
+              <Badge variant="secondary" className="bg-white/90 text-xs">
+                +{facility.sportTypes.length - 2}
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
       
