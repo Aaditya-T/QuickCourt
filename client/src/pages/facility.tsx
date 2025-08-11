@@ -139,14 +139,22 @@ export default function Facility() {
   // Existing bookings for selected date
   const { data: existingBookings = [], isLoading: isBookingsLoading } = useQuery<Booking[]>({
     queryKey: ["/api/facilities", facilityId, "bookings", selectedDate?.toISOString().split("T")[0] ?? ""],
-    enabled: !!facilityId && !!selectedDate && !!token,
+    enabled: !!facilityId && !!selectedDate,
     queryFn: async () => {
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const res = await fetch(
         `/api/facilities/${facilityId}/bookings?date=${selectedDate?.toISOString().split("T")[0]}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
+        { headers }
       );
+      
+      // Don't throw error for 401, just return empty array (public view)
+      if (res.status === 401) {
+        return [];
+      }
       if (!res.ok) throw new Error("Failed to fetch bookings");
       return res.json();
     },
@@ -223,6 +231,11 @@ export default function Facility() {
       setSelectedSport(facilityCourtsWithGames[0].game?.sportType || null);
     }
   }, [facilityCourtsWithGames, selectedSport]);
+
+  // Clear selected slots when date or sport changes
+  useEffect(() => {
+    setSelectedSlots([]);
+  }, [selectedDate, selectedSport]);
 
   const { openLabel, closeLabel, isOpen } = useMemo(() => {
     let openTime = "06:00";
