@@ -694,7 +694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payment routes - Stripe integration
   console.log('Stripe Config:', { 
     secret_key: process.env.STRIPE_SECRET_KEY ? 'SET' : 'MISSING',
-    publishable_key: process.env.VITE_STRIPE_PUBLIC_KEY ? 'SET' : 'MISSING'
+    publishable_key: process.env.STRIPE_PUBLISHABLE_KEY ? 'SET' : 'MISSING'
   });
 
   // Create payment intent
