@@ -26,7 +26,6 @@ export default function Signup() {
     skillLevel: "beginner",
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [useOtp, setUseOtp] = useState(false);
   const [otpStep, setOtpStep] = useState<'form' | 'verify'>('form');
   const [otpCode, setOtpCode] = useState("");
   const { register } = useAuth();
@@ -110,46 +109,8 @@ export default function Signup() {
       return;
     }
 
-    if (useOtp) {
-      sendOtpMutation.mutate(formData);
-    } else {
-      setIsLoading(true);
-
-      try {
-        const { confirmPassword, ...registerData } = formData;
-        // Ensure role is properly typed
-        const typedRegisterData = {
-          ...registerData,
-          role: registerData.role as "user" | "facility_owner" | "admin"
-        };
-        await register(typedRegisterData);
-        
-        toast({
-          title: "Account created successfully",
-          description: "Welcome to QuickCourt!",
-        });
-
-        // Redirect based on role
-        switch (formData.role) {
-          case "facility_owner":
-            setLocation("/facility-owner");
-            break;
-          case "admin":
-            setLocation("/admin");
-            break;
-          default:
-            setLocation("/dashboard");
-        }
-      } catch (error: any) {
-        toast({
-          title: "Registration failed",
-          description: error.message || "Failed to create account. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
+    // Always send OTP for signup
+    sendOtpMutation.mutate(formData);
   };
 
   const handleOtpSubmit = (e: React.FormEvent) => {
@@ -162,7 +123,7 @@ export default function Signup() {
   };
 
   // If we're in OTP verification step, show OTP form
-  if (useOtp && otpStep === 'verify') {
+  if (otpStep === 'verify') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
@@ -357,27 +318,22 @@ export default function Signup() {
               <div className="flex items-center space-x-2 p-4 bg-blue-50 rounded-md">
                 <Mail className="h-4 w-4 text-blue-600" />
                 <div className="flex-1">
-                  <Label htmlFor="use-otp" className="text-sm font-medium">
-                    Email Verification
+                  <Label className="text-sm font-medium">
+                    Email Verification Required
                   </Label>
                   <p className="text-xs text-gray-600 mt-1">
-                    Enable to verify your email with a secure code
+                    We'll send a verification code to verify your email address
                   </p>
                 </div>
-                <Switch
-                  id="use-otp"
-                  checked={useOtp}
-                  onCheckedChange={setUseOtp}
-                />
               </div>
 
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isLoading || sendOtpMutation.isPending}
+                disabled={sendOtpMutation.isPending}
               >
-                {(isLoading || sendOtpMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {useOtp ? "Send Verification Code" : "Create Account"}
+                {sendOtpMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send Verification Code
               </Button>
             </form>
 
