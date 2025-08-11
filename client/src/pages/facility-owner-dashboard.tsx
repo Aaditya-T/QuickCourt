@@ -3,7 +3,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import Navbar from "@/components/ui/navbar";
 import CreateFacilityModal from "@/components/ui/create-facility-modal";
-import CourtManagement from "@/components/ui/court-management";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,8 +30,7 @@ import {
   MapPin,
   Star,
   Clock,
-  Eye,
-  Settings
+  Eye
 } from "lucide-react";
 
 export default function FacilityOwnerDashboard() {
@@ -50,20 +48,6 @@ export default function FacilityOwnerDashboard() {
   const { data: allBookings = [], isLoading: bookingsLoading } = useQuery<any[]>({
     queryKey: ["/api/owner/bookings"],
     enabled: !!user && !!token && user.role === "facility_owner",
-  });
-
-  // Fetch courts for all facilities (for statistics)
-  const { data: allCourts = [] } = useQuery<any[]>({
-    queryKey: ["/api/owner/courts"],
-    queryFn: async () => {
-      const courts = [];
-      for (const facility of facilities) {
-        const facilityCourtData = await fetch(`/api/facilities/${facility.id}/courts`).then(res => res.json());
-        courts.push(...facilityCourtData);
-      }
-      return courts;
-    },
-    enabled: !!facilities.length,
   });
 
   // Delete facility mutation
@@ -168,21 +152,7 @@ export default function FacilityOwnerDashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center">
                 <div className="p-2 bg-blue-100 rounded-lg">
-                  <Settings className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Active Courts</p>
-                  <p className="text-2xl font-bold text-gray-900">{allCourts.filter((court: any) => court.isActive).length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Calendar className="w-6 h-6 text-purple-600" />
+                  <Calendar className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Bookings</p>
@@ -227,7 +197,6 @@ export default function FacilityOwnerDashboard() {
         <Tabs defaultValue="facilities" className="space-y-6">
           <TabsList>
             <TabsTrigger value="facilities">My Facilities</TabsTrigger>
-            <TabsTrigger value="courts">Court Management</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
@@ -285,36 +254,6 @@ export default function FacilityOwnerDashboard() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="courts">
-            <div className="space-y-6">
-              {facilities.length === 0 ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-12">
-                      <Building className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No facilities yet</h3>
-                      <p className="text-gray-500 mb-4">
-                        You need to create facilities before you can manage courts.
-                      </p>
-                      <Button onClick={() => setCreateFacilityModalOpen(true)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Your First Facility
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                facilities.map((facility: any) => (
-                  <CourtManagement
-                    key={facility.id}
-                    facilityId={facility.id}
-                    facilityName={facility.name}
-                  />
-                ))
-              )}
-            </div>
           </TabsContent>
 
           <TabsContent value="bookings">

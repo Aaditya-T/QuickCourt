@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { AuthService } from "./authService";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, insertFacilitySchema, insertCourtSchema, insertBookingSchema, insertMatchSchema, insertReviewSchema } from "@shared/schema";
+import { insertUserSchema, insertFacilitySchema, insertBookingSchema, insertMatchSchema, insertReviewSchema } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -410,100 +410,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(bookings);
     } catch (error) {
       res.status(500).json({ message: "Failed to get bookings", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  // Court management routes for facility owners
-  app.get("/api/facilities/:facilityId/courts", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
-    try {
-      // Check facility ownership (unless admin)
-      if (req.user.role !== "admin") {
-        const facility = await storage.getFacility(req.params.facilityId);
-        if (!facility || facility.ownerId !== req.user.userId) {
-          return res.status(403).json({ message: "Not authorized to access courts for this facility" });
-        }
-      }
-
-      const courts = await storage.getCourts(req.params.facilityId);
-      res.json(courts);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to get courts", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  app.post("/api/facilities/:facilityId/courts", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
-    try {
-      // Check facility ownership (unless admin)
-      if (req.user.role !== "admin") {
-        const facility = await storage.getFacility(req.params.facilityId);
-        if (!facility || facility.ownerId !== req.user.userId) {
-          return res.status(403).json({ message: "Not authorized to create courts for this facility" });
-        }
-      }
-
-      const courtData = insertCourtSchema.parse({
-        ...req.body,
-        facilityId: req.params.facilityId,
-      });
-      
-      const court = await storage.createCourt(courtData);
-      res.status(201).json(court);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid court data", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  app.put("/api/courts/:id", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
-    try {
-      const court = await storage.getCourt(req.params.id);
-      if (!court) {
-        return res.status(404).json({ message: "Court not found" });
-      }
-
-      // Check facility ownership (unless admin)
-      if (req.user.role !== "admin") {
-        const facility = await storage.getFacility(court.facilityId);
-        if (!facility || facility.ownerId !== req.user.userId) {
-          return res.status(403).json({ message: "Not authorized to update this court" });
-        }
-      }
-
-      const updateData = insertCourtSchema.partial().parse(req.body);
-      const updatedCourt = await storage.updateCourt(req.params.id, updateData);
-      
-      if (updatedCourt) {
-        res.json(updatedCourt);
-      } else {
-        res.status(500).json({ message: "Failed to update court" });
-      }
-    } catch (error) {
-      res.status(400).json({ message: "Invalid court data", error: error instanceof Error ? error.message : "Unknown error" });
-    }
-  });
-
-  app.delete("/api/courts/:id", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
-    try {
-      const court = await storage.getCourt(req.params.id);
-      if (!court) {
-        return res.status(404).json({ message: "Court not found" });
-      }
-
-      // Check facility ownership (unless admin)
-      if (req.user.role !== "admin") {
-        const facility = await storage.getFacility(court.facilityId);
-        if (!facility || facility.ownerId !== req.user.userId) {
-          return res.status(403).json({ message: "Not authorized to delete this court" });
-        }
-      }
-
-      const success = await storage.deleteCourt(req.params.id);
-      if (success) {
-        res.json({ message: "Court deleted successfully" });
-      } else {
-        res.status(500).json({ message: "Failed to delete court" });
-      }
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete court", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 

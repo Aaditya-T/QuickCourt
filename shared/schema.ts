@@ -56,24 +56,10 @@ export const facilities = pgTable("facilities", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const courts = pgTable("courts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  facilityId: varchar("facility_id").references(() => facilities.id).notNull(),
-  name: text("name").notNull(),
-  sportType: sportTypeEnum("sport_type").notNull(),
-  pricePerHour: decimal("price_per_hour", { precision: 10, scale: 2 }).notNull(),
-  operatingHours: text("operating_hours").notNull(), // JSON string for court-specific hours
-  isActive: boolean("is_active").default(true),
-  isAvailable: boolean("is_available").default(true), // For maintenance blocking
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
 export const bookings = pgTable("bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
   facilityId: varchar("facility_id").references(() => facilities.id).notNull(),
-  courtId: varchar("court_id").references(() => courts.id),
   date: timestamp("date").notNull(),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
@@ -130,21 +116,14 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
   owner: one(users, { fields: [facilities.ownerId], references: [users.id] }),
-  courts: many(courts),
   bookings: many(bookings),
   matches: many(matches),
   reviews: many(reviews),
 }));
 
-export const courtsRelations = relations(courts, ({ one, many }) => ({
-  facility: one(facilities, { fields: [courts.facilityId], references: [facilities.id] }),
-  bookings: many(bookings),
-}));
-
 export const bookingsRelations = relations(bookings, ({ one }) => ({
   user: one(users, { fields: [bookings.userId], references: [users.id] }),
   facility: one(facilities, { fields: [bookings.facilityId], references: [facilities.id] }),
-  court: one(courts, { fields: [bookings.courtId], references: [courts.id] }),
 }));
 
 export const matchesRelations = relations(matches, ({ one, many }) => ({
@@ -171,12 +150,6 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const insertFacilitySchema = createInsertSchema(facilities).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertCourtSchema = createInsertSchema(courts).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -214,8 +187,6 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertFacility = z.infer<typeof insertFacilitySchema>;
 export type Facility = typeof facilities.$inferSelect;
-export type InsertCourt = z.infer<typeof insertCourtSchema>;
-export type Court = typeof courts.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
 export type InsertMatch = z.infer<typeof insertMatchSchema>;

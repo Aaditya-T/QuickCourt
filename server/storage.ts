@@ -1,7 +1,7 @@
 import { 
-  users, facilities, courts, bookings, matches, matchParticipants, reviews, otpCodes,
+  users, facilities, bookings, matches, matchParticipants, reviews, otpCodes,
   type User, type InsertUser, type Facility, type InsertFacility, 
-  type Court, type InsertCourt, type Booking, type InsertBooking, type Match, type InsertMatch,
+  type Booking, type InsertBooking, type Match, type InsertMatch,
   type MatchParticipant, type InsertMatchParticipant, type Review, type InsertReview,
   type OtpCode, type InsertOtpCode
 } from "@shared/schema";
@@ -23,13 +23,6 @@ export interface IStorage {
   createFacility(facility: InsertFacility): Promise<Facility>;
   updateFacility(id: string, updates: Partial<InsertFacility>): Promise<Facility | undefined>;
   deleteFacility(id: string): Promise<boolean>;
-
-  // Court operations
-  getCourts(facilityId: string): Promise<Court[]>;
-  getCourt(id: string): Promise<Court | undefined>;
-  createCourt(court: InsertCourt): Promise<Court>;
-  updateCourt(id: string, updates: Partial<InsertCourt>): Promise<Court | undefined>;
-  deleteCourt(id: string): Promise<boolean>;
 
   // Booking operations
   getBookings(userId?: string): Promise<Booking[]>;
@@ -136,31 +129,6 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount || 0) > 0;
   }
 
-  // Court operations
-  async getCourts(facilityId: string): Promise<Court[]> {
-    return await db.select().from(courts).where(eq(courts.facilityId, facilityId)).orderBy(asc(courts.name));
-  }
-
-  async getCourt(id: string): Promise<Court | undefined> {
-    const [court] = await db.select().from(courts).where(eq(courts.id, id));
-    return court || undefined;
-  }
-
-  async createCourt(court: InsertCourt): Promise<Court> {
-    const [newCourt] = await db.insert(courts).values(court).returning();
-    return newCourt;
-  }
-
-  async updateCourt(id: string, updates: Partial<InsertCourt>): Promise<Court | undefined> {
-    const [court] = await db.update(courts).set({...updates, updatedAt: new Date()}).where(eq(courts.id, id)).returning();
-    return court || undefined;
-  }
-
-  async deleteCourt(id: string): Promise<boolean> {
-    const result = await db.update(courts).set({ isActive: false, updatedAt: new Date() }).where(eq(courts.id, id));
-    return (result.rowCount || 0) > 0;
-  }
-
   // Booking operations
   async getBookings(userId?: string): Promise<Booking[]> {
     if (userId) {
@@ -175,7 +143,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBookingsByFacility(facilityId: string, date?: Date): Promise<Booking[]> {
-    const conditions = [eq(bookings.facilityId, facilityId)];
+    let query = db.select().from(bookings).where(eq(bookings.facilityId, facilityId));
     
     if (date) {
       const startOfDay = new Date(date);
@@ -183,11 +151,16 @@ export class DatabaseStorage implements IStorage {
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
       
-      conditions.push(gte(bookings.date, startOfDay));
-      conditions.push(lte(bookings.date, endOfDay));
+      query = query.where(
+        and(
+          eq(bookings.facilityId, facilityId),
+          gte(bookings.date, startOfDay),
+          lte(bookings.date, endOfDay)
+        )
+      );
     }
 
-    return await db.select().from(bookings).where(and(...conditions)).orderBy(asc(bookings.startTime));
+    return await query.orderBy(asc(bookings.startTime));
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
@@ -207,19 +180,7 @@ export class DatabaseStorage implements IStorage {
 
   // Match operations
   async getMatches(filters?: { city?: string; sportType?: string; skillLevel?: string }): Promise<Match[]> {
-    const conditions = [eq(matches.status, "open")];
-
-    if (filters?.city) {
-      conditions.push(like(facilities.city, `%${filters.city}%`));
-    }
-    if (filters?.sportType && filters.sportType !== "all" && filters.sportType !== "") {
-      conditions.push(eq(matches.sportType, filters.sportType as any));
-    }
-    if (filters?.skillLevel && filters.skillLevel !== "all" && filters.skillLevel !== "") {
-      conditions.push(eq(matches.skillLevel, filters.skillLevel as any));
-    }
-
-    return await db.select({
+    let query = db.select({
       id: matches.id,
       creatorId: matches.creatorId,
       facilityId: matches.facilityId,
@@ -240,8 +201,19 @@ export class DatabaseStorage implements IStorage {
       facilityCity: facilities.city,
     }).from(matches)
       .leftJoin(facilities, eq(matches.facilityId, facilities.id))
-      .where(and(...conditions))
-      .orderBy(asc(matches.date));
+      .where(eq(matches.status, "open"));
+
+    if (filters?.city) {
+      query = query.where(like(facilities.city, `%${filters.city}%`));
+    }
+    if (filters?.sportType && filters.sportType !== "all" && filters.sportType !== "") {
+      query = query.where(eq(matches.sportType, filters.sportType as any));
+    }
+    if (filters?.skillLevel && filters.skillLevel !== "all" && filters.skillLevel !== "") {
+      query = query.where(eq(matches.skillLevel, filters.skillLevel as any));
+    }
+
+    return await query.orderBy(asc(matches.date));
   }
 
   async getMatch(id: string): Promise<Match | undefined> {
