@@ -2,7 +2,12 @@
 
 ## Overview
 
-QuickCourt is a full-stack web application that connects sports enthusiasts with local sports facilities. The platform allows users to discover and book courts for various sports like badminton, tennis, basketball, and football. It serves three main user types: regular users who want to book facilities and join matches, facility owners who manage their courts and bookings, and administrators who oversee the entire platform.
+QuickCourt is a full-stack web application that connects sports enthusiasts with local sports facilities. The platform allows users to discover and book courts for various sports like badminton, tennis, basketball, and more, while also providing a community feature for organizing and joining matches with other players.
+
+The application serves three main user types:
+- **Regular users** who want to book facilities and join matches
+- **Facility owners** who manage their courts and bookings
+- **Administrators** who oversee the entire platform
 
 ## User Preferences
 
@@ -11,44 +16,80 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend Architecture
-- **React with TypeScript**: Modern component-based UI using functional components and hooks for type-safe development
-- **Wouter**: Lightweight client-side routing library for navigation between pages
-- **Tailwind CSS + shadcn/ui**: Utility-first CSS framework combined with a comprehensive component library following the "new-york" design system
-- **TanStack Query**: Server state management for API calls, caching, and data synchronization with optimistic updates
-- **React Hook Form**: Form handling with validation and seamless user experience
-- **Vite**: Fast build tool and development server with hot module replacement
+- **React with TypeScript**: Modern component-based UI using functional components and hooks
+- **Wouter**: Lightweight routing library for client-side navigation
+- **Tailwind CSS + shadcn/ui**: Utility-first styling with a comprehensive component library
+- **TanStack Query**: Server state management for API calls, caching, and data synchronization
+- **React Hook Form**: Form handling with validation
 
 ### Backend Architecture
-- **Express.js**: RESTful API server with middleware-based architecture for handling HTTP requests
-- **TypeScript**: Type-safe server-side development ensuring consistency across the full stack
-- **JWT Authentication**: Stateless token-based authentication system with role-based access control
-- **bcryptjs**: Secure password hashing for user authentication
-- **Middleware Pattern**: Custom authentication and role-based authorization middleware for protecting routes
+- **Express.js**: RESTful API server with middleware-based architecture
+- **TypeScript**: Type-safe server-side development
+- **JWT Authentication**: Token-based authentication with role-based access control
+- **bcryptjs**: Password hashing for secure user authentication
+- **Session Management**: Express sessions with PostgreSQL store
 
 ### Database Design
-- **PostgreSQL**: Primary relational database hosted on Neon serverless infrastructure
-- **Drizzle ORM**: Type-safe database queries and schema management with automatic migrations
-- **Multi-table Schema**: 
+- **PostgreSQL**: Primary database with Neon serverless hosting
+- **Drizzle ORM**: Type-safe database queries and schema management
+- **Schema Structure**:
   - Users table with role-based permissions (user, facility_owner, admin)
-  - Facilities table for sports venues with geolocation, pricing, and operating hours
-  - Bookings table for facility reservations with time slots
-  - Matches table for community sports events with participant management
-  - Reviews table for facility feedback and ratings
-  - OTP codes table for email verification
+  - Facilities table for sports venues with geolocation and pricing
+  - Bookings table for facility reservations
+  - Matches table for community sports events
+  - Reviews table for facility feedback
   - Junction tables for many-to-many relationships (match participants)
 
 ### Authentication & Authorization
-- **Dual Authentication Methods**: Traditional password-based login and secure email OTP verification using Resend API
-- **Multi-role System**: Granular access control with three user roles (user, facility_owner, admin)
-- **JWT Token Management**: Secure token generation and validation with localStorage persistence
-- **Protected Routes**: Both client-side and server-side route protection based on user roles
-- **Email Integration**: Resend API integration for OTP delivery and user verification
+- **Multi-role system**: Different access levels for users, facility owners, and administrators
+- **JWT tokens**: Stateless authentication with localStorage persistence
+- **OTP Authentication**: Integrated email verification system using Resend API with toggle switches in login/signup forms
+- **Dual auth methods**: Users can choose between traditional password or secure email code authentication
+- **Protected routes**: Role-based route protection on both client and server
+- **Middleware authentication**: Server-side token verification for API endpoints
+
+### Key Features Architecture
+- **Booking System**: Time-slot based reservations with availability checking
+- **Match Organization**: Community-driven sports event creation and participation
+- **Search & Filtering**: Multi-criteria facility and match discovery
+- **Real-time Updates**: Optimistic updates with query invalidation
+- **Responsive Design**: Mobile-first approach with adaptive layouts
 
 ## External Dependencies
 
-- **Database**: PostgreSQL database hosted on Neon serverless platform
-- **Email Service**: Resend API for transactional emails and OTP verification
-- **UI Components**: Radix UI primitives for accessible, unstyled UI components
-- **Font Services**: Google Fonts (Inter) and Font Awesome for icons
-- **Image Hosting**: Unsplash for placeholder facility images
-- **Development Tools**: ESBuild for production bundling, Drizzle Kit for database migrations
+### Core Framework Dependencies
+- **React 18**: Frontend framework with concurrent features
+- **Express.js**: Node.js web application framework
+- **TypeScript**: Static type checking for both frontend and backend
+
+### Database & ORM
+- **@neondatabase/serverless**: Serverless PostgreSQL connection driver
+- **Drizzle ORM**: Type-safe database toolkit with schema management
+- **drizzle-kit**: CLI tools for database migrations and schema updates
+
+### UI & Styling
+- **Tailwind CSS**: Utility-first CSS framework
+- **@radix-ui/***: Headless UI components for accessibility
+- **shadcn/ui**: Pre-built component library built on Radix
+- **Lucide React**: Icon library for consistent iconography
+
+### Data Management
+- **@tanstack/react-query**: Server state management and caching
+- **React Hook Form**: Form handling with validation
+- **@hookform/resolvers**: Form validation resolvers
+- **Zod**: Schema validation for type safety
+
+### Authentication & Security
+- **jsonwebtoken**: JWT token creation and verification
+- **bcryptjs**: Password hashing and comparison
+- **connect-pg-simple**: PostgreSQL session store for Express
+
+### Development & Build Tools
+- **Vite**: Fast build tool and development server
+- **ESBuild**: JavaScript bundler for production builds
+- **PostCSS**: CSS processing with autoprefixer
+
+### Utility Libraries
+- **date-fns**: Date manipulation and formatting
+- **clsx & class-variance-authority**: Conditional CSS class management
+- **nanoid**: Unique ID generation for database records
