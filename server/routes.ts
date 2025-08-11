@@ -37,7 +37,80 @@ const requireRole = (roles: string[]) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth routes
+  // OTP Auth routes
+  app.post("/api/auth/signup/send-otp", async (req, res) => {
+    try {
+      const { email, ...userData } = req.body;
+      const result = await AuthService.sendSignupOTP(email, userData);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+      
+      res.json({ message: result.message });
+    } catch (error) {
+      console.error("OTP signup error:", error);
+      res.status(500).json({ message: "Failed to send verification code" });
+    }
+  });
+
+  app.post("/api/auth/signup/verify-otp", async (req, res) => {
+    try {
+      const { email, code, ...userData } = req.body;
+      const result = await AuthService.verifySignupOTP(email, code, userData);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+      
+      res.status(201).json({
+        message: result.message,
+        user: result.user,
+        token: result.token,
+      });
+    } catch (error) {
+      console.error("OTP verification error:", error);
+      res.status(500).json({ message: "Failed to verify code" });
+    }
+  });
+
+  app.post("/api/auth/login/send-otp", async (req, res) => {
+    try {
+      const { email } = req.body;
+      const result = await AuthService.sendLoginOTP(email);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+      
+      res.json({ message: result.message });
+    } catch (error) {
+      console.error("Login OTP error:", error);
+      res.status(500).json({ message: "Failed to send login code" });
+    }
+  });
+
+  app.post("/api/auth/login/verify-otp", async (req, res) => {
+    try {
+      const { email, code } = req.body;
+      const result = await AuthService.verifyLoginOTP(email, code);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+      
+      res.json({
+        message: result.message,
+        user: result.user,
+        token: result.token,
+      });
+    } catch (error) {
+      console.error("Login OTP verification error:", error);
+      res.status(500).json({ message: "Failed to verify login code" });
+    }
+  });
+
+  // Traditional Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
