@@ -532,9 +532,6 @@ const MAX_REVIEW_COMMENT_LENGTH = 100;
                       <Trophy className="w-4 h-4" />
                       <span>{facility.sportTypes?.length || 0} sports</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <span className="font-semibold text-blue-600">₹{facility.pricePerHour}/hr</span>
-                    </div>
                   </div>
 
                   {/* Facility Info Cards */}
@@ -753,7 +750,6 @@ const MAX_REVIEW_COMMENT_LENGTH = 100;
                                         </span>
                                       </div>
                                     </div>
-                                    <span className="text-sm font-bold text-blue-600">₹{basePrice}/hr</span>
                                   </div>
                                 </div>
                               );

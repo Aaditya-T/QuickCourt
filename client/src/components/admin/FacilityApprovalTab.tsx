@@ -72,7 +72,11 @@ export default function FacilityApprovalTab({ token }: FacilityApprovalTabProps)
         },
       });
       if (!response.ok) throw new Error("Failed to fetch pending facilities");
-      return response.json();
+      const facilities = await response.json();
+      // Filter out facilities that have been rejected (have rejection reasons) or are already approved
+      return facilities.filter((facility: Facility) => 
+        !facility.rejectionReason && !facility.isApproved
+      );
     },
   });
 
@@ -300,6 +304,13 @@ export default function FacilityApprovalTab({ token }: FacilityApprovalTabProps)
   const approvedCount = allFacilities.filter(f => f.isApproved).length;
   const rejectedCount = allFacilities.filter(f => !f.isApproved && f.rejectionReason).length;
 
+  // Debug logging
+  console.log('Pending facilities (filtered):', pendingFacilities);
+  console.log('All facilities:', allFacilities);
+  console.log('Pending count:', pendingCount);
+  console.log('Approved count:', approvedCount);
+  console.log('Rejected count:', rejectedCount);
+
   return (
     <>
       {/* Stats Cards */}
@@ -360,6 +371,7 @@ export default function FacilityApprovalTab({ token }: FacilityApprovalTabProps)
               </div>
             </div>
           </CardContent>
+
         </Card>
       </div>
 
@@ -380,32 +392,30 @@ export default function FacilityApprovalTab({ token }: FacilityApprovalTabProps)
             </div>
           ) : (
             <div className="space-y-6">
-              {pendingFacilities.map((facility) => (
-                <div key={facility.id} className={`border-l-4 border-amber-400 bg-amber-50 rounded-lg p-6`}>
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-start space-x-6">
+              {pendingFacilities
+                .filter(facility => !facility.rejectionReason && !facility.isApproved) // Additional safety filter
+                .map((facility) => (
+                <div key={facility.id} className={`border-l-4 border-amber-400 bg-amber-50 rounded-lg p-4 sm:p-6`}>
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-4 sm:mb-6 space-y-4 lg:space-y-0">
+                    <div className="flex items-start space-x-3 sm:space-x-6 min-w-0 flex-1">
                       <img 
                         src={facility.images[0] || "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=100"} 
                         alt="Facility" 
-                        className="w-20 h-20 object-cover rounded-lg"
+                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0"
                       />
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">{facility.name}</h4>
-                        <p className="text-gray-600 mb-2">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 truncate">{facility.name}</h4>
+                        <p className="text-sm text-gray-600 mb-2 break-words">
                           Owner: {facility.owner.firstName} {facility.owner.lastName} ({facility.owner.email})
                         </p>
-                        <div className="flex items-center space-x-6 text-sm text-gray-500 mt-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-6 text-sm text-gray-500 mt-3">
                           <span className="flex items-center">
-                            <MapPin className="w-4 h-4 mr-2" />
-                            {facility.city}, {facility.state}
+                            <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <span className="truncate">{facility.city}, {facility.state}</span>
                           </span>
                           <span className="flex items-center">
-                            <span className="w-4 h-4 mr-2 rounded-full bg-blue-500"></span>
-                            ₹{facility.pricePerHour}/hour
-                          </span>
-                          <span className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            {new Date(facility.createdAt).toLocaleDateString()}
+                            <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <span>{new Date(facility.createdAt).toLocaleDateString()}</span>
                           </span>
                         </div>
                       </div>
@@ -413,40 +423,47 @@ export default function FacilityApprovalTab({ token }: FacilityApprovalTabProps)
                     {getApprovalStatusBadge(facility)}
                   </div>
                   
-                  <p className="text-gray-700 mb-4">{facility.description}</p>
+                  <p className="text-gray-700 mb-4 break-words">{facility.description}</p>
                   
                   <div className="flex flex-wrap gap-2 mb-4">
                     {facility.amenities.map((amenity) => (
-                      <Badge key={amenity} variant="outline" className="bg-blue-50 text-blue-700">
+                      <Badge key={amenity} variant="outline" className="bg-blue-50 text-blue-700 text-xs">
                         {amenity}
                       </Badge>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <div className="flex space-x-3">
-                      <Button 
-                        onClick={() => handleApprove(facility)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        disabled={approveFacilityMutation.isPending}
-                      >
-                        <Check className="w-4 h-4 mr-2" />
-                        {approveFacilityMutation.isPending ? "Approving..." : "Approve"}
-                      </Button>
-                      <Button 
-                        onClick={() => handleReject(facility)}
-                        variant="destructive"
-                        disabled={rejectFacilityMutation.isPending}
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        {rejectFacilityMutation.isPending ? "Rejecting..." : "Reject"}
-                      </Button>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t border-gray-200 space-y-3 sm:space-y-0">
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                      {!facility.rejectionReason && (
+                        <>
+                          <Button 
+                            onClick={() => handleApprove(facility)}
+                            className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                            disabled={approveFacilityMutation.isPending}
+                          >
+                            <Check className="w-4 h-4 mr-2" />
+                            {approveFacilityMutation.isPending ? "Approving..." : "Approve"}
+                          </Button>
+                          <Button 
+                            onClick={() => handleReject(facility)}
+                            variant="destructive"
+                            className="w-full sm:w-auto"
+                            disabled={rejectFacilityMutation.isPending}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            {rejectFacilityMutation.isPending ? "Rejecting..." : "Reject"}
+                          </Button>
+                        </>
+                      )}
                       {facility.isApproved && (
                         <Button 
                           variant="outline"
                           onClick={() => handleToggleVisibility(facility)}
                           disabled={toggleFacilityVisibilityMutation.isPending}
-                          className={facility.isActive ? "text-orange-600 border-orange-200 hover:bg-orange-50" : "text-green-600 border-green-200 hover:bg-green-50"}
+                          className={`w-full sm:w-auto ${
+                            facility.isActive ? "text-orange-600 border-orange-200 hover:bg-orange-50" : "text-green-600 border-green-200 hover:bg-green-50"
+                          }`}
                         >
                           {facility.isActive ? (
                             <>
@@ -462,7 +479,7 @@ export default function FacilityApprovalTab({ token }: FacilityApprovalTabProps)
                         </Button>
                       )}
                     </div>
-                    <Button variant="outline" onClick={() => handleViewDetails(facility)}>
+                    <Button variant="outline" onClick={() => handleViewDetails(facility)} className="w-full sm:w-auto">
                       <Eye className="w-4 h-4 mr-2" />
                       View Details
                     </Button>
@@ -477,14 +494,14 @@ export default function FacilityApprovalTab({ token }: FacilityApprovalTabProps)
       {/* All Facilities Status */}
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
             <div className="flex items-center">
               <Building className="w-6 h-6 mr-3 text-blue-600" />
               All Facilities Status
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
               <select 
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
                 onChange={(e) => {
                   const filter = e.target.value;
                   // You can implement filtering logic here if needed
@@ -500,61 +517,65 @@ export default function FacilityApprovalTab({ token }: FacilityApprovalTabProps)
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="space-y-4">
             {allFacilities.map((facility) => (
               <div key={facility.id} className={`border-l-4 rounded-lg p-4 ${getStatusColor(facility)}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
+                  <div className="flex items-start space-x-3 sm:space-x-4 min-w-0 flex-1">
                     <img 
                       src={facility.images[0] || "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=100"} 
                       alt="Facility" 
-                      className="w-12 h-12 object-cover rounded-lg"
+                      className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
                     />
-                    <div>
-                      <h5 className="font-medium text-gray-900">{facility.name}</h5>
-                      <p className="text-sm text-gray-600">
+                    <div className="min-w-0 flex-1">
+                      <h5 className="font-medium text-gray-900 truncate">{facility.name}</h5>
+                      <p className="text-sm text-gray-600 truncate">
                         {facility.owner.firstName} {facility.owner.lastName} • {facility.city}
                       </p>
-                                             {facility.rejectionReason && (
-                         <p className="text-sm text-red-600 mt-1">
-                           <AlertTriangle className="w-3 h-3 inline mr-1" />
-                           Rejected: {facility.rejectionReason}
-                         </p>
-                       )}
-                       <div className="flex items-center space-x-2 mt-1">
-                         <Badge 
-                           variant={facility.isActive ? "default" : "secondary"} 
-                           className="text-xs"
-                         >
-                           {facility.isActive ? "Publicly Listed" : "Unlisted"}
-                         </Badge>
-                       </div>
+                      {facility.rejectionReason && (
+                        <p className="text-sm text-red-600 mt-1 break-words">
+                          <AlertTriangle className="w-3 h-3 inline mr-1" />
+                          Rejected: {facility.rejectionReason}
+                        </p>
+                      )}
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Badge 
+                          variant={facility.isActive ? "default" : "secondary"} 
+                          className="text-xs"
+                        >
+                          {facility.isActive ? "Publicly Listed" : "Unlisted"}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 lg:flex-shrink-0">
                     {getApprovalStatusBadge(facility)}
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleToggleVisibility(facility)}
-                        disabled={toggleFacilityVisibilityMutation.isPending}
-                        className={facility.isActive ? "text-orange-600 border-orange-200 hover:bg-orange-50" : "text-green-600 border-green-200 hover:bg-green-50"}
-                      >
-                        {facility.isActive ? (
-                          <>
-                            <Eye className="w-4 h-4 mr-1" />
-                            Unlist
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="w-4 h-4 mr-1" />
-                            Relist
-                          </>
-                        )}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleViewDetails(facility)}>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                      {facility.isApproved && !facility.rejectionReason && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleToggleVisibility(facility)}
+                          disabled={toggleFacilityVisibilityMutation.isPending}
+                          className={`w-full sm:w-auto ${
+                            facility.isActive ? "text-orange-600 border-orange-200 hover:bg-orange-50" : "text-green-600 border-green-200 hover:bg-green-50"
+                          }`}
+                        >
+                          {facility.isActive ? (
+                            <>
+                              <Eye className="w-4 h-4 mr-1" />
+                              Unlist
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-4 h-4 mr-1" />
+                              Relist
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm" onClick={() => handleViewDetails(facility)} className="w-full sm:w-auto">
                         <Eye className="w-4 h-4 mr-2" />
                         View
                       </Button>

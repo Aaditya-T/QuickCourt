@@ -219,20 +219,21 @@ export default function AdminDashboard() {
       {/* Navigation */}
       <nav className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row justify-between h-auto sm:h-16 py-4 sm:py-0 space-y-4 sm:space-y-0">
+            <div className="flex items-center justify-center sm:justify-start space-x-4">
               <div className="flex-shrink-0">
                 <SiteLogo variant="nav" />
               </div>
               <Link href="/">
                 <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
                   <LayoutDashboard className="w-4 h-4 mr-2" />
-                  Home
+                  <span className="hidden sm:inline">Home</span>
+                  <span className="sm:hidden">Home</span>
                 </Button>
               </Link>
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 w-full sm:w-auto justify-center">
                 <Shield className="w-3 h-3 mr-1" />
                 Administrator
               </Badge>
@@ -248,7 +249,7 @@ export default function AdminDashboard() {
                     logout();
                   }
                 }}
-                className="text-gray-600 hover:text-red-600"
+                className="text-gray-600 hover:text-red-600 w-full sm:w-auto justify-center"
               >
                 <LogOut className="w-5 h-5 mr-2" />
                 Logout
@@ -260,7 +261,7 @@ export default function AdminDashboard() {
 
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
           {/* Breadcrumb Navigation */}
           <div className="mb-4">
             <nav className="flex" aria-label="Breadcrumb">
@@ -268,7 +269,7 @@ export default function AdminDashboard() {
                 <li className="inline-flex items-center">
                   <Link href="/" className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600">
                     <LayoutDashboard className="w-4 h-4 mr-2" />
-                    Home
+                    <span className="hidden sm:inline">Home</span>
                   </Link>
                 </li>
                 <li>
@@ -282,19 +283,20 @@ export default function AdminDashboard() {
               </ol>
             </nav>
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                <LayoutDashboard className="w-8 h-8 mr-3 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
+                <LayoutDashboard className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-blue-600" />
                 Sports Admin Dashboard
               </h1>
-              <p className="text-gray-600 mt-2">Manage facilities, users, and platform analytics</p>
+              <p className="text-gray-600 mt-2 text-sm sm:text-base">Manage facilities, users, and platform analytics</p>
             </div>
-            <div className="flex items-center space-x-3">
-              <Link href="/">
-                <Button variant="outline">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+              <Link href="/" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto">
                   <LayoutDashboard className="w-4 h-4 mr-2" />
-                  Back to Home
+                  <span className="hidden sm:inline">Back to Home</span>
+                  <span className="sm:hidden">Home</span>
                 </Button>
               </Link>
               <Button 
@@ -305,14 +307,17 @@ export default function AdminDashboard() {
                   queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard/system-health"] });
                 }}
                 disabled={statsLoading || activityLoading || healthLoading}
+                className="w-full sm:w-auto"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
-                {(statsLoading || activityLoading || healthLoading) ? "Refreshing..." : "Refresh All"}
+                <span className="hidden sm:inline">{(statsLoading || activityLoading || healthLoading) ? "Refreshing..." : "Refresh All"}</span>
+                <span className="sm:hidden">Refresh</span>
               </Button>
-              <Link href="/profile">
-                <Button variant="outline">
+              <Link href="/profile" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto">
                   <User className="w-4 h-4 mr-2" />
-                  My Profile
+                  <span className="hidden sm:inline">My Profile</span>
+                  <span className="sm:hidden">Profile</span>
                 </Button>
               </Link>
             </div>
@@ -320,13 +325,13 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-7 gap-0 bg-white border border-gray-200 p-0 h-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          <TabsList className="grid grid-cols-4 gap-0 bg-white border border-gray-200 p-0 h-auto overflow-x-auto">
             <TabsTrigger 
               value="dashboard" 
-              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+              className="flex flex-col items-center py-2 sm:py-3 px-1 sm:px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium min-w-0"
             >
               <BarChart3 className="w-4 h-4 mb-1" />
               <span className="hidden sm:inline">Dashboard</span>
@@ -334,7 +339,7 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger 
               value="facility-approval"
-              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+              className="flex flex-col items-center py-2 sm:py-3 px-1 sm:px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium min-w-0"
             >
               <Building className="w-4 h-4 mb-1" />
               <span className="hidden sm:inline">Facility Approval</span>
@@ -342,7 +347,7 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger 
               value="user-management"
-              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+              className="flex flex-col items-center py-2 sm:py-3 px-1 sm:px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium min-w-0"
             >
               <Users className="w-4 h-4 mb-1" />
               <span className="hidden sm:inline">User Management</span>
@@ -350,7 +355,7 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger 
               value="reports"
-              className="flex flex-col items-center py-3 px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium"
+              className="flex flex-col items-center py-2 sm:py-3 px-1 sm:px-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-500 hover:text-gray-700 text-xs font-medium min-w-0"
             >
               <Flag className="w-4 h-4 mb-1" />
               <span className="hidden sm:inline">Reports & Moderation</span>
@@ -361,20 +366,20 @@ export default function AdminDashboard() {
 
           <TabsContent value="dashboard">
             {/* Global Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
               <Card className="bg-white border shadow-sm">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="p-3 bg-blue-100 rounded-lg">
-                        <Users className="w-6 h-6 text-blue-600" />
+                      <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
+                        <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
-                      <dd className="text-2xl font-bold text-gray-900">
+                    <div className="ml-3 sm:ml-5 w-0 flex-1">
+                      <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                      <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                         {statsLoading ? (
-                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-6 sm:h-8 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
                         ) : (
                           totalUsers.toLocaleString()
                         )}
@@ -385,18 +390,18 @@ export default function AdminDashboard() {
               </Card>
 
               <Card className="bg-white border shadow-sm">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="p-3 bg-green-100 rounded-lg">
-                        <Building className="w-6 h-6 text-green-600" />
+                      <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
+                        <Building className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dt className="text-sm font-medium text-gray-500 truncate">Facility Owners</dt>
-                      <dd className="text-2xl font-bold text-gray-900">
+                    <div className="ml-3 sm:ml-5 w-0 flex-1">
+                      <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Facility Owners</dt>
+                      <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                         {statsLoading ? (
-                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-6 sm:h-8 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
                         ) : (
                           totalFacilityOwners.toLocaleString()
                         )}
@@ -407,18 +412,18 @@ export default function AdminDashboard() {
               </Card>
 
               <Card className="bg-white border shadow-sm">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="p-3 bg-purple-100 rounded-lg">
-                        <Calendar className="w-6 h-6 text-purple-600" />
+                      <div className="p-2 sm:p-3 bg-purple-100 rounded-lg">
+                        <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dt className="text-sm font-medium text-gray-500 truncate">Total Bookings</dt>
-                      <dd className="text-2xl font-bold text-gray-900">
+                    <div className="ml-3 sm:ml-5 w-0 flex-1">
+                      <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Bookings</dt>
+                      <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                         {statsLoading ? (
-                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-6 sm:h-8 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
                         ) : (
                           totalBookings.toLocaleString()
                         )}
@@ -429,18 +434,18 @@ export default function AdminDashboard() {
               </Card>
 
               <Card className="bg-white border shadow-sm">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="p-3 bg-orange-100 rounded-lg">
-                        <TrendingUp className="w-6 h-6 text-orange-600" />
+                      <div className="p-2 sm:p-3 bg-orange-100 rounded-lg">
+                        <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dt className="text-sm font-medium text-gray-500 truncate">Active Courts</dt>
-                      <dd className="text-2xl font-bold text-gray-900">
+                    <div className="ml-3 sm:ml-5 w-0 flex-1">
+                      <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Active Courts</dt>
+                      <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                         {statsLoading ? (
-                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-6 sm:h-8 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
                         ) : (
                           activeCourts.toLocaleString()
                         )}
@@ -452,20 +457,20 @@ export default function AdminDashboard() {
             </div>
 
             {/* Additional Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
               <Card className="bg-white border shadow-sm">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="p-3 bg-amber-100 rounded-lg">
-                        <Clock className="w-6 h-6 text-amber-600" />
+                      <div className="p-2 sm:p-3 bg-amber-100 rounded-lg">
+                        <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dt className="text-sm font-medium text-gray-500 truncate">This Month</dt>
-                      <dd className="text-2xl font-bold text-gray-900">
+                    <div className="ml-3 sm:ml-5 w-0 flex-1">
+                      <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">This Month</dt>
+                      <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                         {statsLoading ? (
-                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-6 sm:h-8 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
                         ) : (
                           thisMonthBookings.toLocaleString()
                         )}
@@ -477,18 +482,18 @@ export default function AdminDashboard() {
               </Card>
 
               <Card className="bg-white border shadow-sm">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="p-3 bg-red-100 rounded-lg">
-                        <AlertTriangle className="w-6 h-6 text-red-600" />
+                      <div className="p-2 sm:p-3 bg-red-100 rounded-lg">
+                        <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dt className="text-sm font-medium text-gray-500 truncate">Pending</dt>
-                      <dd className="text-2xl font-bold text-gray-900">
+                    <div className="ml-3 sm:ml-5 w-0 flex-1">
+                      <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Pending</dt>
+                      <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                         {statsLoading ? (
-                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-6 sm:h-8 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
                         ) : (
                           (dashboardStats?.pendingApprovals || 0).toLocaleString()
                         )}
@@ -499,19 +504,19 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white border shadow-sm">
-                <CardContent className="p-6">
+              <Card className="bg-white border shadow-sm sm:col-span-2 lg:col-span-1">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="p-3 bg-green-100 rounded-lg">
-                        <TrendingUp className="w-6 h-6 text-green-600" />
+                      <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
+                        <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dt className="text-sm font-medium text-gray-500 truncate">Revenue</dt>
-                      <dd className="text-2xl font-bold text-gray-900">
+                    <div className="ml-3 sm:ml-5 w-0 flex-1">
+                      <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Revenue</dt>
+                      <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                         {statsLoading ? (
-                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-6 sm:h-8 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
                         ) : (
                           `₹${(dashboardStats?.totalRevenue || 0).toLocaleString()}`
                         )}
@@ -527,10 +532,10 @@ export default function AdminDashboard() {
             <AdminCharts />
 
             {/* Recent Activity & System Health */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-6 sm:mt-8">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center justify-between text-base sm:text-lg">
                     Recent Activity
                     <Button 
                       variant="ghost" 
@@ -542,7 +547,7 @@ export default function AdminDashboard() {
                     </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6">
                   {activityLoading ? (
                     <div className="space-y-4">
                       {[...Array(3)].map((_, i) => (
@@ -567,7 +572,7 @@ export default function AdminDashboard() {
                             activity.type === 'booking_created' ? 'bg-purple-500' :
                             activity.type === 'match_created' ? 'bg-orange-500' : 'bg-gray-500'
                           }`}></div>
-                          <p className="text-sm flex-1">
+                          <p className="text-xs sm:text-sm flex-1">
                             {activity.action}
                             {activity.name && `: ${activity.name}`}
                             {activity.title && `: ${activity.title}`}
@@ -581,8 +586,8 @@ export default function AdminDashboard() {
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center justify-between text-base sm:text-lg">
                     System Health
                     <Button 
                       variant="ghost" 
@@ -594,7 +599,7 @@ export default function AdminDashboard() {
                     </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6">
                   {healthLoading ? (
                     <div className="space-y-4">
                       {[...Array(3)].map((_, i) => (
@@ -607,7 +612,7 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Database</span>
+                        <span className="text-xs sm:text-sm font-medium">Database</span>
                         <Badge 
                           variant="outline" 
                           className={`${
@@ -628,7 +633,7 @@ export default function AdminDashboard() {
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">API Services</span>
+                        <span className="text-xs sm:text-sm font-medium">API Services</span>
                         <Badge 
                           variant="outline" 
                           className={`${
@@ -649,7 +654,7 @@ export default function AdminDashboard() {
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Payment Gateway</span>
+                        <span className="text-xs sm:text-sm font-medium">Payment Gateway</span>
                         <Badge 
                           variant="outline" 
                           className={`${
