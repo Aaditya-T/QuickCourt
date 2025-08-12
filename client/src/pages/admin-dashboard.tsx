@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import SiteLogo from "@/components/ui/site-logo";
 import { queryClient } from "@/lib/queryClient";
 import { 
   Users,
@@ -221,10 +222,7 @@ export default function AdminDashboard() {
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-4">
               <div className="flex-shrink-0">
-                <h1 className="text-xl font-bold flex items-center bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
-                  <Zap className="w-6 h-6 mr-2 text-blue-600" />
-                  QuickCourt
-                </h1>
+                <SiteLogo variant="nav" />
               </div>
               <Link href="/">
                 <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">

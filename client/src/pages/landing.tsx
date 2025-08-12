@@ -23,6 +23,8 @@ import {
   Menu,
   X
 } from "lucide-react";
+import Navbar from "@/components/ui/navbar";
+import SiteLogo from "@/components/ui/site-logo";
 
 export default function Landing() {
   const [activeFeature, setActiveFeature] = useState(0);
@@ -160,119 +162,10 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Enhanced Floating Navbar */}
-      <nav className={`fixed z-50 transition-all duration-700 ease-in-out ${
-        isNavbarCompact 
-          ? 'top-4 right-4 w-auto h-auto' 
-          : 'top-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-6xl rounded-2xl'
-      } ${
-        isNavbarVisible ? 'translate-y-0 opacity-100' : '-translate-y-24 opacity-0'
-      } ${
-        isNavbarCompact 
-          ? 'bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200' 
-          : 'bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg'
-      }`}>
-        
-        {/* Compact Mode - Just Hamburger */}
-        {isNavbarCompact && (
-          <div className="p-3">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 hover:bg-gray-100"
-            >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-          </div>
-        )}
-
-        {/* Compact mode dropdown - positioned relative to hamburger */}
-        {isMenuOpen && isNavbarCompact && (
-          <div className="absolute top-full right-0 mt-2 z-40 bg-white/95 backdrop-blur-md border border-gray-200 rounded-xl shadow-lg min-w-[200px] transition-all duration-300 ease-in-out animate-in slide-in-from-top-2">
-            <div className="p-4">
-              <div className="flex flex-col space-y-3">
-                <a href="#features" className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1 hover:bg-gray-50 rounded">Features</a>
-                <a href="#sports" className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1 hover:bg-gray-50 rounded">Sports</a>
-                <a href="#roles" className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1 hover:bg-gray-50 rounded">For You</a>
-                <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200">
-                  <Link href="/login">
-                    <Button variant="outline" className="w-full">Login</Button>
-                  </Link>
-                  <Link href="/signup">
-                    <Button className="w-full bg-gradient-to-r from-primary to-secondary">Get Started</Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Full Mode - Complete Navbar */}
-        {!isNavbarCompact && (
-          <div className="px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center -ml-6 sm:-ml-8 lg:-ml-10">
-                <div className="w-60 h-[135px] sm:w-70 sm:h-[157px] lg:w-80 lg:h-[180px]">
-                  <img 
-                    src="/logo.png" 
-                    alt="QuickCourt Logo" 
-                    className="w-full h-full object-contain"
-                    style={{ aspectRatio: '16/9' }}
-                  />
-                </div>
-              </div>
-              
-              {/* Desktop navigation */}
-              <div className="hidden lg:flex items-center space-x-8">
-                <a href="#features" className="text-gray-600 hover:text-primary transition-colors font-medium">Features</a>
-                <a href="#sports" className="text-gray-600 hover:text-primary transition-colors font-medium">Sports</a>
-                <a href="#roles" className="text-gray-600 hover:text-primary transition-colors font-medium">For You</a>
-                <Link href="/login">
-                  <Button variant="outline" className="mr-2">Login</Button>
-                </Link>
-                <Link href="/signup">
-                  <Button className="bg-gradient-to-r from-primary to-secondary">Get Started</Button>
-                </Link>
-              </div>
-
-              {/* Mobile menu */}
-              <div className="lg:hidden flex items-center space-x-2">
-                <Link href="/login" className="hidden sm:block">
-                  <Button variant="outline" size="sm">Login</Button>
-                </Link>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="p-2"
-                >
-                  {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </Button>
-              </div>
-            </div>
-
-            {/* Mobile menu dropdown for full mode */}
-            {isMenuOpen && (
-              <div className="lg:hidden border-t border-gray-200 py-4">
-                <div className="flex flex-col space-y-3">
-                  <a href="#features" className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1">Features</a>
-                  <a href="#sports" className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1">Sports</a>
-                  <a href="#roles" className="text-gray-600 hover:text-primary transition-colors font-medium px-2 py-1">For You</a>
-                  <div className="flex flex-col sm:hidden space-y-2 pt-2 border-t border-gray-200">
-                    <Link href="/login">
-                      <Button variant="outline" className="w-full">Login</Button>
-                    </Link>
-                    <Link href="/signup">
-                      <Button className="w-full bg-gradient-to-r from-primary to-secondary">Get Started</Button>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </nav>
+      {/* Unified Navbar */}
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <Navbar />
+      </div>
 
       {/* Enhanced Hero Section */}
       <section className="pt-32 pb-20 bg-gradient-to-br from-primary/5 via-white to-secondary/5 relative overflow-hidden min-h-screen flex items-center">
@@ -578,14 +471,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-8 sm:mb-12">
             <div className="sm:col-span-2 lg:col-span-2">
               <div className="flex items-center space-x-3 mb-6">
-                <div className="w-28 h-[63px] sm:w-32 sm:h-[72px]">
-                  <img 
-                    src="/logo.png" 
-                    alt="QuickCourt Logo" 
-                    className="w-full h-full object-contain"
-                    style={{ aspectRatio: '16/9' }}
-                  />
-                </div>
+                <SiteLogo variant="footer" />
               </div>
               <p className="text-gray-400 mb-6 leading-relaxed text-sm sm:text-base">
                 India's leading sports facility booking platform. Connect with your local sports community, book premium facilities, and elevate your game.

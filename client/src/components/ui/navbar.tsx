@@ -11,6 +11,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, User, LogOut, Settings } from "lucide-react";
+import SiteLogo from "@/components/ui/site-logo";
 
 export default function Navbar() {
   const [location] = useLocation();
@@ -20,23 +21,30 @@ export default function Navbar() {
   const getNavItems = () => {
     if (!user) {
       return [
+        { href: "/", label: "Home" },
         { href: "/facilities", label: "Find Courts" },
-        { href: "/matches", label: "Matches" },
+        { href: "/matches", label: "Matches" }
       ];
     }
     
     switch (user.role) {
       case "facility_owner":
-        return []; // Facility owners don't get general navigation items
+        return [
+          { href: "/", label: "Home" },
+          { href: "/facilities", label: "Find Courts" },
+          { href: "/matches", label: "Matches" }
+        ];
       case "admin":
         return [
+          { href: "/", label: "Home" },
           { href: "/facilities", label: "Find Courts" },
-          { href: "/matches", label: "Matches" },
+          { href: "/matches", label: "Matches" }
         ];
       default: // regular users
         return [
+          { href: "/", label: "Home" },
           { href: "/facilities", label: "Find Courts" },
-          { href: "/matches", label: "Matches" },
+          { href: "/matches", label: "Matches" }
         ];
     }
   };
@@ -102,9 +110,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/">
-              <a className="text-2xl font-bold text-gray-900">QuickCourt</a>
-            </Link>
+            <SiteLogo variant="nav" />
           </div>
 
           {/* Desktop Navigation */}

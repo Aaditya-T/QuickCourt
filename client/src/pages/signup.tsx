@@ -14,6 +14,7 @@ import ValidatedFormField from "@/components/ui/validated-form-field";
 import FormErrorDisplay from "@/components/ui/form-error-display";
 import { useFormValidation } from "@/hooks/use-form-validation";
 import { signupFormSchema, otpVerificationSchema, type SignupFormData, type OtpVerificationData } from "@shared/validation";
+import SiteLogo from "@/components/ui/site-logo";
 
 export default function Signup() {
   const [, setLocation] = useLocation();
@@ -181,9 +182,7 @@ export default function Signup() {
         <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
           <div className="max-w-md w-full space-y-8">
             <div className="text-center">
-              <Link href="/">
-                <a className="text-3xl font-bold text-primary">QuickCourt</a>
-              </Link>
+              <SiteLogo variant="auth" className="mx-auto" />
               <p className="mt-2 text-gray-600">Verify your email</p>
             </div>
 
@@ -288,9 +287,7 @@ export default function Signup() {
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <Link href="/">
-              <a className="text-3xl font-bold text-primary">QuickCourt</a>
-            </Link>
+            <SiteLogo variant="auth" className="mx-auto" />
             <p className="mt-2 text-gray-600">Create your account</p>
           </div>
 
