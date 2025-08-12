@@ -25,12 +25,12 @@ export default function SiteLogo({ variant = "nav", className }: SiteLogoProps) 
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-       >
+>
           <img
             src="/logo.png"
             alt="QuickCourt Logo"
             className="w-full h-full object-contain"
-            style={{ aspectRatio: "16/9" }}
+            style={{ aspectRatio: "16/9", transform: "scale(1.5)" }}
           />
         </motion.div>
       </a>
