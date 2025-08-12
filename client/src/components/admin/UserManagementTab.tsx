@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { AuthUser } from "@/types";
 import { 
   Users, 
   Search, 
@@ -51,6 +52,7 @@ interface UserManagementTabProps {
   users: User[];
   isLoading: boolean;
   token: string | null;
+  currentUser: AuthUser | null;
   onUpdateUserRole: (userId: string, role: string) => void;
 }
 
@@ -62,7 +64,7 @@ interface EditUserForm {
   role: string;
 }
 
-export default function UserManagementTab({ users, isLoading, token, onUpdateUserRole }: UserManagementTabProps) {
+export default function UserManagementTab({ users, isLoading, token, currentUser, onUpdateUserRole }: UserManagementTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -163,11 +165,33 @@ export default function UserManagementTab({ users, isLoading, token, onUpdateUse
     }
   };
 
+  // Check if current user can edit the target user
+  const canEditUser = (targetUser: User): boolean => {
+    if (!currentUser) return false;
+    
+    // Admins cannot edit other admin accounts
+    if (targetUser.role === "admin" && targetUser.id !== currentUser.id) {
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleEditUser = (user: User) => {
     if (!token) {
       toast({
         title: "Authentication Error",
         description: "No authentication token available. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if current user can edit this user
+    if (!canEditUser(user)) {
+      toast({
+        title: "Access Denied",
+        description: "You cannot edit other admin accounts.",
         variant: "destructive",
       });
       return;
@@ -324,13 +348,21 @@ export default function UserManagementTab({ users, isLoading, token, onUpdateUse
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <Badge 
-                        variant={user.role === "admin" ? "destructive" : 
-                                user.role === "facility_owner" ? "default" : "secondary"}
-                        className="capitalize"
-                      >
-                        {user.role === "facility_owner" ? "Facility Owner" : user.role}
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Badge 
+                          variant={user.role === "admin" ? "destructive" : 
+                                  user.role === "facility_owner" ? "default" : "secondary"}
+                          className="capitalize"
+                        >
+                          {user.role === "facility_owner" ? "Facility Owner" : user.role}
+                        </Badge>
+                        {user.role === "admin" && user.id !== currentUser?.id && (
+                          <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
+                            <Shield className="w-3 h-3 mr-1" />
+                            Protected
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center text-sm text-gray-600">
@@ -355,10 +387,11 @@ export default function UserManagementTab({ users, isLoading, token, onUpdateUse
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem 
                             onClick={() => handleEditUser(user)}
-                            disabled={!token}
+                            disabled={!token || !canEditUser(user)}
+                            className={!canEditUser(user) ? "opacity-50 cursor-not-allowed" : ""}
                           >
                             <Edit className="w-4 h-4 mr-2" />
-                            Edit Details
+                            {!canEditUser(user) ? "Cannot Edit Admin" : "Edit Details"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

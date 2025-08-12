@@ -36,7 +36,7 @@ import UserManagementTab from "@/components/admin/UserManagementTab";
 import ReportsTab from "@/components/admin/ReportsTab";
 
 export default function AdminDashboard() {
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
 
@@ -219,21 +219,41 @@ export default function AdminDashboard() {
       <nav className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center">
+            <div className="flex items-center space-x-4">
               <div className="flex-shrink-0">
                 <h1 className="text-xl font-bold flex items-center bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
                   <Zap className="w-6 h-6 mr-2 text-blue-600" />
                   QuickCourt
                 </h1>
               </div>
+              <Link href="/">
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+                  <LayoutDashboard className="w-4 h-4 mr-2" />
+                  Home
+                </Button>
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
               <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
                 <Shield className="w-3 h-3 mr-1" />
                 Administrator
               </Badge>
-              <Button variant="ghost" size="sm">
-                <LogOut className="w-5 h-5" />
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  if (confirm('Are you sure you want to logout?')) {
+                    toast({
+                      title: "Logging out",
+                      description: "You have been successfully logged out.",
+                    });
+                    logout();
+                  }
+                }}
+                className="text-gray-600 hover:text-red-600"
+              >
+                <LogOut className="w-5 h-5 mr-2" />
+                Logout
               </Button>
             </div>
           </div>
@@ -243,6 +263,27 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Breadcrumb Navigation */}
+          <div className="mb-4">
+            <nav className="flex" aria-label="Breadcrumb">
+              <ol className="inline-flex items-center space-x-1 md:space-x-3">
+                <li className="inline-flex items-center">
+                  <Link href="/" className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600">
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <div className="flex items-center">
+                    <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
+                    </svg>
+                    <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2">Admin Dashboard</span>
+                  </div>
+                </li>
+              </ol>
+            </nav>
+          </div>
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center">
@@ -252,6 +293,12 @@ export default function AdminDashboard() {
               <p className="text-gray-600 mt-2">Manage facilities, users, and platform analytics</p>
             </div>
             <div className="flex items-center space-x-3">
+              <Link href="/">
+                <Button variant="outline">
+                  <LayoutDashboard className="w-4 h-4 mr-2" />
+                  Back to Home
+                </Button>
+              </Link>
               <Button 
                 variant="outline" 
                 onClick={() => {
@@ -649,24 +696,25 @@ export default function AdminDashboard() {
             <OwnerApprovalTab />
           </TabsContent>
 
-          <TabsContent value="user-management">
-            {token ? (
-              <UserManagementTab 
-                users={users} 
-                isLoading={usersLoading} 
-                token={token}
-                onUpdateUserRole={(userId, role) => updateUserRoleMutation.mutate({ userId, role })} 
-              />
-            ) : (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading authentication...</div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+                      <TabsContent value="user-management">
+              {token ? (
+                <UserManagementTab
+                  users={users}
+                  isLoading={usersLoading}
+                  token={token}
+                  currentUser={user}
+                  onUpdateUserRole={(userId, role) => updateUserRoleMutation.mutate({ userId, role })}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-center py-12">
+                      <div className="text-gray-500">Loading authentication...</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
           <TabsContent value="reports">
             <ReportsTab />

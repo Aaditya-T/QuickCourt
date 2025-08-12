@@ -1367,6 +1367,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/users/:id", authenticateToken, requireRole(['admin']), async (req: any, res) => {
     try {
       const { firstName, lastName, phone, skillLevel, role } = req.body;
+      const targetUserId = req.params.id;
+      const currentUserId = req.user.userId;
+      
+      // Get the target user to check their current role
+      const targetUser = await storage.getUserById(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Prevent admins from editing other admin accounts
+      if (targetUser.role === 'admin' && targetUserId !== currentUserId) {
+        return res.status(403).json({ 
+          message: "Access denied: You cannot edit other admin accounts" 
+        });
+      }
       
       // Validate role if provided
       if (role && !['user', 'facility_owner', 'admin'].includes(role)) {
@@ -1385,7 +1400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (skillLevel !== undefined) updates.skillLevel = skillLevel;
       if (role !== undefined) updates.role = role;
 
-      const updatedUser = await storage.updateUser(req.params.id, updates);
+      const updatedUser = await storage.updateUser(targetUserId, updates);
       if (updatedUser) {
         res.json({ message: "User updated successfully", user: updatedUser });
       } else {
