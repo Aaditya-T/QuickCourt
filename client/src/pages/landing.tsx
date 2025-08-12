@@ -9,9 +9,6 @@ import {
   Users, 
   Star, 
   MapPin, 
-  Clock, 
-  Shield, 
-  Trophy,
   ArrowRight,
   CheckCircle,
   Heart,
@@ -19,9 +16,6 @@ import {
   Zap,
   Award,
   Globe,
-  TrendingUp,
-  Menu,
-  X
 } from "lucide-react";
 import Navbar from "@/components/ui/navbar";
 import SiteLogo from "@/components/ui/site-logo";
@@ -178,20 +172,23 @@ export default function Landing() {
                 INDIA'S #1 SPORTS BOOKING PLATFORM
               </Badge>
               
+
               <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-                YOUR{" "}
+                YOUR
+                <br />
                 <span className="inline-block relative align-baseline" style={{ height: '1em', width: 'auto', minWidth: '350px' }}>
                   {rotatingTexts.map((text, index) => (
                     <span 
                       key={index}
-                      className={`absolute top-0 left-0 w-full h-full flex items-center justify-start transition-all duration-500 ease-in-out bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent ${
+                      className={`absolute top-0 left-0 w-full h-full flex items-center justify-center lg:justify-start transition-all duration-500 ease-in-out bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent ${
                         index === currentTextIndex ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-4'
                       }`}
                     >
                       {text}
                     </span>
                   ))}
-                </span>{" "}
+                </span>
+                <br />
                 <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                   SPORTS FACILITY
                 </span>
@@ -200,7 +197,6 @@ export default function Landing() {
                   Awaits You
                 </span>
               </h1>
-              
               <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-lg leading-relaxed mx-auto lg:mx-0">
                 Discover, book, and play at premium sports facilities. Connect with fellow enthusiasts and build your local sports community.
               </p>

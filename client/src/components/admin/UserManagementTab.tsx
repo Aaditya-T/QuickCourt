@@ -30,7 +30,8 @@ import {
   Phone,
   Camera,
   Save,
-  X
+  X,
+  CheckCircle
 } from "lucide-react";
 
 interface User {
@@ -44,6 +45,7 @@ interface User {
   profileImage?: string;
   skillLevel?: string;
   isActive: boolean;
+  isBanned: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -122,6 +124,66 @@ export default function UserManagementTab({ users, isLoading, token, currentUser
     },
   });
 
+  // Ban user mutation
+  const banUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      if (!token) throw new Error('No authentication token');
+      
+      const response = await fetch(`/api/admin/users/${userId}/ban`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to ban user');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User banned successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to ban user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Unban user mutation
+  const unbanUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      if (!token) throw new Error('No authentication token');
+      
+      const response = await fetch(`/api/admin/users/${userId}/unban`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to unban user');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User unbanned successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to unban user",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Upload profile image mutation
   const uploadImageMutation = useMutation({
     mutationFn: async ({ userId, file }: { userId: string; file: File }) => {
@@ -161,6 +223,20 @@ export default function UserManagementTab({ users, isLoading, token, currentUser
   const handleRoleChange = (userId: string, newRole: string) => {
     if (confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
       onUpdateUserRole(userId, newRole);
+      setOpenDropdown(null);
+    }
+  };
+
+  const handleBanUser = (userId: string, userName: string) => {
+    if (confirm(`Are you sure you want to ban ${userName}? This will prevent them from accessing the platform.`)) {
+      banUserMutation.mutate(userId);
+      setOpenDropdown(null);
+    }
+  };
+
+  const handleUnbanUser = (userId: string, userName: string) => {
+    if (confirm(`Are you sure you want to unban ${userName}? This will restore their access to the platform.`)) {
+      unbanUserMutation.mutate(userId);
       setOpenDropdown(null);
     }
   };
@@ -305,6 +381,7 @@ export default function UserManagementTab({ users, isLoading, token, currentUser
                   <th className="text-left py-3 px-4 font-medium text-gray-900">User</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900">Contact</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900">Role</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900">Joined</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-900">Actions</th>
                 </tr>
@@ -365,6 +442,21 @@ export default function UserManagementTab({ users, isLoading, token, currentUser
                       </div>
                     </td>
                     <td className="py-4 px-4">
+                      <div className="flex items-center space-x-2">
+                        {user.isBanned ? (
+                          <Badge variant="destructive" className="text-xs">
+                            <UserX className="w-3 h-3 mr-1" />
+                            Banned
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-green-600 border-green-200 bg-green-50">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
                       <div className="flex items-center text-sm text-gray-600">
                         <Calendar className="w-3 h-3 mr-1" />
                         {new Date(user.createdAt).toLocaleDateString()}
@@ -393,6 +485,24 @@ export default function UserManagementTab({ users, isLoading, token, currentUser
                             <Edit className="w-4 h-4 mr-2" />
                             {!canEditUser(user) ? "Cannot Edit Admin" : "Edit Details"}
                           </DropdownMenuItem>
+                          {!user.isBanned ? (
+                            <DropdownMenuItem 
+                              onClick={() => handleBanUser(user.id, `${user.firstName} ${user.lastName}`)}
+                              disabled={!token || user.role === "admin" || user.id === currentUser?.id}
+                              className={user.role === "admin" || user.id === currentUser?.id ? "opacity-50 cursor-not-allowed" : ""}
+                            >
+                              <UserX className="w-4 h-4 mr-2" />
+                              Ban User
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem 
+                              onClick={() => handleUnbanUser(user.id, `${user.firstName} ${user.lastName}`)}
+                              disabled={!token}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Unban User
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>

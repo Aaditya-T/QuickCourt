@@ -107,6 +107,65 @@ export function registerAdminRoutes(app: Express, authenticateToken: any, requir
     }
   });
 
+  // Ban user
+  app.patch("/api/admin/users/:id/ban", authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const targetUserId = req.params.id;
+      const currentUserId = req.user.userId;
+      
+      // Prevent admins from banning themselves
+      if (targetUserId === currentUserId) {
+        return res.status(400).json({ 
+          message: "You cannot ban yourself" 
+        });
+      }
+
+      // Get the target user to check their current role
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Prevent admins from banning other admin accounts
+      if (targetUser.role === 'admin') {
+        return res.status(403).json({ 
+          message: "Access denied: You cannot ban other admin accounts" 
+        });
+      }
+
+      const success = await storage.banUser(targetUserId);
+      if (success) {
+        res.json({ message: "User banned successfully" });
+      } else {
+        res.status(404).json({ message: "User not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to ban user", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Unban user
+  app.patch("/api/admin/users/:id/unban", authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const targetUserId = req.params.id;
+      
+      // Get the target user to check their current role
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const success = await storage.unbanUser(targetUserId);
+      if (success) {
+        res.json({ message: "User unbanned successfully" });
+      } else {
+        res.status(404).json({ message: "User not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to unban user", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   // Update user details (name, phone, skill level, role)
   app.patch("/api/admin/users/:id", authenticateToken, requireRole(['admin']), async (req: any, res) => {
     try {
@@ -115,7 +174,7 @@ export function registerAdminRoutes(app: Express, authenticateToken: any, requir
       const currentUserId = req.user.userId;
       
       // Get the target user to check their current role
-      const targetUser = await storage.getUserById(targetUserId);
+      const targetUser = await storage.getUser(targetUserId);
       if (!targetUser) {
         return res.status(404).json({ message: "User not found" });
       }

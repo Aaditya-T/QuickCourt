@@ -690,6 +690,22 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount || 0) > 0;
   }
 
+  async banUser(id: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ isBanned: true, updatedAt: new Date() })
+      .where(eq(users.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async unbanUser(id: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ isBanned: false, updatedAt: new Date() })
+      .where(eq(users.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
   async updateFacilityApproval(id: string, isApproved: boolean, rejectionReason?: string, approvedBy?: string): Promise<boolean> {
     const result = await db
       .update(facilities)
@@ -810,6 +826,12 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .where(eq(users.role, 'facility_owner'));
       
+      // Get banned users count
+      const bannedUsers = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.isBanned, true));
+      
       // Get total bookings count
       const totalBookings = await db
         .select({ count: sql<number>`count(*)` })
@@ -843,6 +865,7 @@ export class DatabaseStorage implements IStorage {
       return {
         totalUsers: totalUsers[0]?.count || 0,
         facilityOwners: facilityOwners[0]?.count || 0,
+        bannedUsers: bannedUsers[0]?.count || 0,
         totalBookings: totalBookings[0]?.count || 0,
         activeCourts: activeCourts[0]?.count || 0,
         thisMonthBookings: thisMonthBookings[0]?.count || 0,

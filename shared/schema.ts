@@ -21,6 +21,7 @@ export const users = pgTable("users", {
   profileImage: text("profile_image"),
   skillLevel: skillLevelEnum("skill_level").default("beginner"),
   isEmailVerified: boolean("is_email_verified").default(false),
+  isBanned: boolean("is_banned").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
