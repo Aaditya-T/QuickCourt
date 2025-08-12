@@ -33,7 +33,6 @@ export default function Facilities() {
     city: "",
     sportType: "",
     searchTerm: "",
-    priceRange: "",
     sortBy: "rating",
     sortOrder: "desc",
   });
@@ -45,7 +44,6 @@ export default function Facilities() {
       city: params.get("city") || "",
       sportType: params.get("sportType") || "",
       searchTerm: params.get("searchTerm") || "",
-      priceRange: params.get("priceRange") || "",
       sortBy: params.get("sortBy") || "rating",
       sortOrder: params.get("sortOrder") || "desc",
     });
@@ -69,13 +67,15 @@ export default function Facilities() {
       if (filters.city) params.set("city", filters.city);
       if (filters.sportType) params.set("sportType", filters.sportType);
       if (filters.searchTerm) params.set("searchTerm", filters.searchTerm);
-      if (filters.priceRange) params.set("priceRange", filters.priceRange);
       if (filters.sortBy) params.set("sortBy", filters.sortBy);
       if (filters.sortOrder) params.set("sortOrder", filters.sortOrder);
 
+      console.log('🔍 Searching facilities with params:', params.toString());
       const response = await fetch(`/api/facilities?${params.toString()}`);
       if (!response.ok) throw new Error("Failed to fetch facilities");
-      return response.json();
+      const data = await response.json();
+      console.log('📊 Found facilities:', data.length);
+      return data;
     },
   });
 
@@ -181,7 +181,7 @@ export default function Facilities() {
                   </Label>
                   <Input
                     id="city"
-                    placeholder="Search by city, area, or location..."
+                    placeholder="Search by city, state, or address..."
                     value={filters.city}
                     onChange={(e) => handleFilterChange("city", e.target.value)}
                     className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
@@ -211,22 +211,7 @@ export default function Facilities() {
                   </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="priceRange" className="text-sm font-medium mb-2 block text-gray-700">
-                    💰 Price Range
-                  </Label>
-                  <Select value={filters.priceRange || "all"} onValueChange={(value) => handleFilterChange("priceRange", value)}>
-                    <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                      <SelectValue placeholder="Any Price" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Any Price</SelectItem>
-                      <SelectItem value="budget">₹ Budget (Under ₹500/hr)</SelectItem>
-                      <SelectItem value="mid">₹₹ Mid-range (₹500-1000/hr)</SelectItem>
-                      <SelectItem value="premium">₹₹₹ Premium (Above ₹1000/hr)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
 
                 <div>
                   <Label htmlFor="sortBy" className="text-sm font-medium mb-2 block text-gray-700">
@@ -321,7 +306,7 @@ export default function Facilities() {
                     {filters.searchTerm && <div>• Search: "{filters.searchTerm}"</div>}
                     {filters.city && <div>• Location: {filters.city}</div>}
                     {filters.sportType && <div>• Sport: {allGames.find(game => game.sportType === filters.sportType)?.emoji} {allGames.find(game => game.sportType === filters.sportType)?.name}</div>}
-                    {filters.priceRange && <div>• Price: {filters.priceRange}</div>}
+
                   </div>
                   <p className="mt-4">Try adjusting your filters or browse all available facilities.</p>
                 </div>
@@ -334,7 +319,6 @@ export default function Facilities() {
                       city: "", 
                       sportType: "", 
                       searchTerm: "", 
-                      priceRange: "", 
                       sortBy: "rating", 
                       sortOrder: "desc" 
                     };

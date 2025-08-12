@@ -7,6 +7,21 @@ import {
   type OtpCode, type InsertOtpCode, type Game, type InsertGame,
   type FacilityCourt, type InsertFacilityCourt
 } from "@shared/schema";
+
+// Extended booking type with related data
+type EnrichedBooking = Booking & {
+  facility: {
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+  } | null;
+  game: {
+    id: string;
+    name: string;
+    sportType: string;
+  } | null;
+};
 import { db } from "./db";
 import { eq, and, desc, asc, gte, lte, like, or, count, sql } from "drizzle-orm";
 
@@ -39,9 +54,9 @@ export interface IStorage {
   deleteFacilityCourt(id: string): Promise<boolean>;
 
   // Booking operations
-  getBookings(userId?: string): Promise<Booking[]>;
-  getBooking(id: string): Promise<Booking | undefined>;
-  getBookingsByFacility(facilityId: string, date?: Date): Promise<Booking[]>;
+  getBookings(userId?: string): Promise<EnrichedBooking[]>;
+  getBooking(id: string): Promise<EnrichedBooking | undefined>;
+  getBookingsByFacility(facilityId: string, date?: Date): Promise<EnrichedBooking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBooking(id: string, updates: Partial<InsertBooking>): Promise<Booking | undefined>;
   cancelBooking(id: string): Promise<boolean>;
@@ -126,28 +141,27 @@ export class DatabaseStorage implements IStorage {
     let conditions = [eq(facilities.isActive, true), eq(facilities.isApproved, true)];
 
     if (filters?.city) {
-      // Use ILIKE for case-insensitive search and trim whitespace
-      const citySearch = filters.city.trim();
-      if (citySearch) {
-        conditions.push(sql`LOWER(${facilities.city}) LIKE LOWER(${`%${citySearch}%`})`);
-      }
+      // Use ILIKE for case-insensitive search (works in PostgreSQL)
+      const citySearch = `%${filters.city}%`;
+      conditions.push(
+        or(
+          sql`${facilities.city} ILIKE ${citySearch}`,
+          sql`${facilities.state} ILIKE ${citySearch}`,
+          sql`${facilities.address} ILIKE ${citySearch}`
+        )!
+      );
     }
     if (filters?.sportType && filters.sportType !== "all" && filters.sportType !== "") {
       // Use SQL operator to check if the sport type is in the array
       conditions.push(sql`${filters.sportType} = ANY(${facilities.sportTypes})`);
     }
     if (filters?.searchTerm) {
-      // Use ILIKE for case-insensitive search and trim whitespace
-      const searchTerm = filters.searchTerm.trim();
-      if (searchTerm) {
-        conditions.push(
-          or(
-            sql`LOWER(${facilities.name}) LIKE LOWER(${`%${searchTerm}%`})`,
-            sql`LOWER(${facilities.description}) LIKE LOWER(${`%${searchTerm}%`})`,
-            sql`LOWER(${facilities.address}) LIKE LOWER(${`%${searchTerm}%`})`
-          )!
-        );
-      }
+      conditions.push(
+        or(
+          like(facilities.name, `%${filters.searchTerm.toLowerCase()}%`),
+          like(facilities.description, `%${filters.searchTerm.toLowerCase()}%`)
+        )!
+      );
     }
 
     // Apply sorting - default to rating desc
@@ -221,19 +235,89 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Booking operations
-  async getBookings(userId?: string): Promise<Booking[]> {
+  async getBookings(userId?: string): Promise<EnrichedBooking[]> {
     if (userId) {
-      return await db.select().from(bookings).where(eq(bookings.userId, userId)).orderBy(desc(bookings.date));
+      const userBookings = await db.select().from(bookings).where(eq(bookings.userId, userId)).orderBy(desc(bookings.date));
+      
+      // Fetch related facility and game data for each booking
+      const enrichedBookings = await Promise.all(
+        userBookings.map(async (booking) => {
+          const [facility] = await db.select().from(facilities).where(eq(facilities.id, booking.facilityId));
+          const [game] = await db.select().from(games).where(eq(games.id, booking.gameId));
+          
+          return {
+            ...booking,
+            facility: facility ? { 
+              id: facility.id, 
+              name: facility.name, 
+              address: facility.address, 
+              city: facility.city 
+            } : null,
+            game: game ? { 
+              id: game.id, 
+              name: game.name, 
+              sportType: game.sportType 
+            } : null
+          };
+        })
+      );
+      
+      return enrichedBookings;
     }
-    return await db.select().from(bookings).orderBy(desc(bookings.date));
+    
+    const allBookings = await db.select().from(bookings).orderBy(desc(bookings.date));
+    
+    // Fetch related facility and game data for each booking
+    const enrichedBookings = await Promise.all(
+      allBookings.map(async (booking) => {
+        const [facility] = await db.select().from(facilities).where(eq(facilities.id, booking.facilityId));
+        const [game] = await db.select().from(games).where(eq(games.id, booking.gameId));
+        
+        return {
+          ...booking,
+          facility: facility ? { 
+            id: facility.id, 
+            name: facility.name, 
+            address: facility.address, 
+            city: facility.city 
+          } : null,
+          game: game ? { 
+            id: game.id, 
+            name: game.name, 
+            sportType: game.sportType 
+          } : null
+        };
+      })
+    );
+    
+    return enrichedBookings;
   }
 
-  async getBooking(id: string): Promise<Booking | undefined> {
+  async getBooking(id: string): Promise<EnrichedBooking | undefined> {
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
-    return booking || undefined;
+    if (!booking) return undefined;
+    
+    // Fetch related facility and game data
+    const [facility] = await db.select().from(facilities).where(eq(facilities.id, booking.facilityId));
+    const [game] = await db.select().from(games).where(eq(games.id, booking.gameId));
+    
+    return {
+      ...booking,
+      facility: facility ? { 
+        id: facility.id, 
+        name: facility.name, 
+        address: facility.address, 
+        city: facility.city 
+      } : null,
+      game: game ? { 
+        id: game.id, 
+        name: game.name, 
+        sportType: game.sportType 
+      } : null
+    };
   }
 
-  async getBookingsByFacility(facilityId: string, date?: Date): Promise<Booking[]> {
+  async getBookingsByFacility(facilityId: string, date?: Date): Promise<EnrichedBooking[]> {
     let conditions = [eq(bookings.facilityId, facilityId)];
 
     if (date) {
@@ -246,9 +330,34 @@ export class DatabaseStorage implements IStorage {
       conditions.push(lte(bookings.date, endOfDay));
     }
 
-    return await db.select().from(bookings)
+    const facilityBookings = await db.select().from(bookings)
       .where(and(...conditions))
       .orderBy(asc(bookings.startTime));
+    
+    // Fetch related facility and game data for each booking
+    const enrichedBookings = await Promise.all(
+      facilityBookings.map(async (booking) => {
+        const [facility] = await db.select().from(facilities).where(eq(facilities.id, booking.facilityId));
+        const [game] = await db.select().from(games).where(eq(games.id, booking.gameId));
+        
+        return {
+          ...booking,
+          facility: facility ? { 
+            id: facility.id, 
+            name: facility.name, 
+            address: facility.address, 
+            city: facility.city 
+          } : null,
+          game: game ? { 
+            id: game.id, 
+            name: game.name, 
+            sportType: game.sportType 
+          } : null
+        };
+      })
+    );
+    
+    return enrichedBookings;
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
@@ -893,6 +1002,13 @@ export class DatabaseStorage implements IStorage {
     
     return date.toLocaleDateString();
   }
+
+  async getUserById(id: string): Promise<User | undefined> {
+    const user = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return user[0];
+  }
+
+  
 }
 
 export const storage = new DatabaseStorage();

@@ -19,7 +19,6 @@ import FacilityOwnerDashboard from "@/pages/facility-owner-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
-import MatchmakingPage from "@/pages/matchmaking";
 import StripePayment from "@/pages/stripe-payment";
 import PaymentSuccess from "@/pages/payment-success";
 
@@ -38,7 +37,11 @@ function Router() {
       >
         <Switch>
           <Route path="/" component={Landing} />
-          <Route path="/home" component={Home} />
+          <Route path="/home">
+            <RouteGuard allowedRoles={["user", "admin"]}>
+              <Home />
+            </RouteGuard>
+          </Route>
           <Route path="/login" component={Login} />
           <Route path="/signup" component={Signup} />
           <Route path="/facilities/:id">
@@ -56,11 +59,7 @@ function Router() {
               <Matches />
             </RouteGuard>
           </Route>
-          <Route path="/matchmaking">
-            <RouteGuard allowedRoles={["user", "admin"]}>
-              <MatchmakingPage />
-            </RouteGuard>
-          </Route>
+          
           <Route path="/dashboard">
             <RouteGuard allowedRoles={["user"]}>
               <Dashboard />

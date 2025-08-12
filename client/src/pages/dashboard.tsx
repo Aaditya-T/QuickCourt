@@ -89,30 +89,30 @@ export default function Dashboard() {
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-6 lg:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 Welcome back, {user.firstName}!
               </h1>
               <p className="text-gray-600 mt-2">
                 Manage your bookings and discover new matches
               </p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-3">
               <Link href="/profile">
-                <Button variant="outline">
+                <Button variant="outline" className="w-full sm:w-auto">
                   <User className="w-4 h-4 mr-2" />
                   My Profile
                 </Button>
               </Link>
               <Link href="/facilities">
-                <Button variant="outline">
+                <Button variant="outline" className="w-full sm:w-auto">
                   <BookOpen className="w-4 h-4 mr-2" />
                   Book Court
                 </Button>
               </Link>
               <Link href="/matches">
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <Users className="w-4 h-4 mr-2" />
                   Find Matches
                 </Button>
@@ -294,7 +294,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="upcoming" className="space-y-4">
-              <TabsList>
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
                 <TabsTrigger value="past">Past</TabsTrigger>
               </TabsList>
@@ -348,16 +348,16 @@ interface BookingCardProps {
 
 function BookingCard({ booking, isPast }: BookingCardProps) {
   return (
-    <div className="flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow space-y-4 sm:space-y-0">
       <div className="flex items-center space-x-4">
         <div className="p-3 bg-primary/10 rounded-lg">
           <MapPin className="w-6 h-6 text-primary" />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h4 className="font-medium">
             {booking.facility?.name || "Court Booking"}
           </h4>
-          <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0 text-sm text-gray-600 mt-1">
             <span className="flex items-center">
               <Calendar className="w-4 h-4 mr-1" />
               {format(new Date(booking.date), "MMM dd, yyyy")}
@@ -378,8 +378,8 @@ function BookingCard({ booking, isPast }: BookingCardProps) {
         </div>
       </div>
       
-      <div className="text-right space-y-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-col-reverse sm:text-right space-y-2 sm:space-y-2">
+        <div className="flex items-center justify-between sm:justify-end gap-2">
           <Badge 
             variant={
               booking.status === "confirmed" ? "default" :
@@ -391,7 +391,7 @@ function BookingCard({ booking, isPast }: BookingCardProps) {
           </Badge>
           <BookingReceipt booking={booking} />
         </div>
-        <p className="text-sm font-medium">₹{booking.totalAmount}</p>
+        <p className="text-sm font-medium text-center sm:text-right">₹{booking.totalAmount}</p>
       </div>
     </div>
   );

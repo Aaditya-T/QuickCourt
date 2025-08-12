@@ -121,10 +121,13 @@ export default function Facility() {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   // Review states
-  const [reviewRating, setReviewRating] = useState<number>(5);
-  const [reviewComment, setReviewComment] = useState<string>("");
-  const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
-  const [showReviewDialog, setShowReviewDialog] = useState<boolean>(false);
+const [reviewRating, setReviewRating] = useState<number>(5);
+const [reviewComment, setReviewComment] = useState<string>("");
+const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
+const [showReviewDialog, setShowReviewDialog] = useState<boolean>(false);
+
+// Review comment character limit
+const MAX_REVIEW_COMMENT_LENGTH = 100;
 
   // Facility details
   const { data: facility, isLoading: isFacilityLoading } = useQuery<Facility | null>({
@@ -433,6 +436,14 @@ export default function Facility() {
       });
       return;
     }
+    if (reviewComment.length > MAX_REVIEW_COMMENT_LENGTH) {
+      toast({
+        title: "Error",
+        description: `Review comment cannot exceed ${MAX_REVIEW_COMMENT_LENGTH} characters.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSubmittingReview(true);
     try {
       await submitReviewMutation.mutateAsync({
@@ -605,20 +616,6 @@ export default function Facility() {
                         ) : (
                           <span className="text-gray-500 text-sm italic">No amenities listed</span>
                         )}
-                      </div>
-                    </div>
-
-                    {/* Pricing */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-200">
-                        <div className="text-sm font-medium text-gray-700 mb-1">Base Price</div>
-                        <div className="text-2xl font-bold text-blue-600">₹{facility.pricePerHour}</div>
-                        <div className="text-xs text-gray-500">per hour</div>
-                      </div>
-                      <div className="bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded-lg border border-green-200">
-                        <div className="text-sm font-medium text-gray-700 mb-1">Rating</div>
-                        <div className="text-2xl font-bold text-green-600">{facility.rating}</div>
-                        <div className="text-xs text-gray-500">({facility.totalReviews} reviews)</div>
                       </div>
                     </div>
                   </CardContent>
@@ -1036,8 +1033,9 @@ export default function Facility() {
                                     key={star}
                                     type="button"
                                     onClick={() => setReviewRating(star)}
+                                    disabled={isSubmittingReview}
                                     className={`text-2xl ${star <= reviewRating ? "text-yellow-400" : "text-gray-300"
-                                      }`}
+                                      } ${isSubmittingReview ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                   >
                                     ★
                                   </button>
@@ -1049,16 +1047,47 @@ export default function Facility() {
                               <Textarea
                                 placeholder="Share your experience..."
                                 value={reviewComment}
-                                onChange={(e) => setReviewComment(e.target.value)}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value.length <= MAX_REVIEW_COMMENT_LENGTH) {
+                                    setReviewComment(value);
+                                  }
+                                }}
                                 rows={4}
+                                maxLength={MAX_REVIEW_COMMENT_LENGTH}
+                                disabled={isSubmittingReview}
+                                className={`${reviewComment.length > MAX_REVIEW_COMMENT_LENGTH ? "border-red-500" : ""} ${isSubmittingReview ? "opacity-50 cursor-not-allowed" : ""}`}
                               />
+                              <div className="flex justify-between items-center mt-1">
+                                <span className={`text-xs ${
+                                  reviewComment.length > MAX_REVIEW_COMMENT_LENGTH 
+                                    ? "text-red-500" 
+                                    : reviewComment.length > MAX_REVIEW_COMMENT_LENGTH * 0.8 
+                                    ? "text-orange-500" 
+                                    : "text-gray-500"
+                                }`}>
+                                  {reviewComment.length}/{MAX_REVIEW_COMMENT_LENGTH} characters
+                                </span>
+                                {reviewComment.length > MAX_REVIEW_COMMENT_LENGTH && (
+                                  <span className="text-xs text-red-500 font-medium">
+                                    Character limit exceeded!
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <Button
                               onClick={handleSubmitReview}
-                              disabled={reviewRating === 0 || reviewComment.trim() === ""}
+                              disabled={reviewRating === 0 || reviewComment.trim() === "" || reviewComment.length > MAX_REVIEW_COMMENT_LENGTH || isSubmittingReview}
                               className="w-full"
                             >
-                              Submit Review
+                              {isSubmittingReview ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Submitting...
+                                </>
+                              ) : (
+                                "Submit Review"
+                              )}
                             </Button>
                           </div>
                         </DialogContent>

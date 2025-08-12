@@ -255,6 +255,8 @@ export const insertMatchParticipantSchema = createInsertSchema(matchParticipants
 export const insertReviewSchema = createInsertSchema(reviews).omit({
   id: true,
   createdAt: true,
+}).extend({
+  comment: z.string().max(100, "Review comment cannot exceed 100 characters"),
 });
 
 export const insertOtpCodeSchema = createInsertSchema(otpCodes).omit({

@@ -30,9 +30,7 @@ export default function Navbar() {
     switch (user.role) {
       case "facility_owner":
         return [
-          { href: "/", label: "Home" },
-          { href: "/facilities", label: "Find Courts" },
-          { href: "/matches", label: "Matches" }
+          { href: "/", label: "Home" }
         ];
       case "admin":
         return [
@@ -150,7 +148,7 @@ export default function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href={getDashboardLink()}>
                       <User className="mr-2 h-4 w-4" />
-                      <span>Dashboard</span>
+                      <span>{user.role === "facility_owner" ? "My Facilities" : "Dashboard"}</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout}>

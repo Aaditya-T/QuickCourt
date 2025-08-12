@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,35 @@ interface BookingReceiptProps {
 export default function BookingReceipt({ booking, trigger }: BookingReceiptProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [isOpen, setIsOpen] = useState(false);
+  const [facilityData, setFacilityData] = useState<any>(null);
+  const [gameData, setGameData] = useState<any>(null);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
+
+  const fetchFacilityAndGameData = async () => {
+    if (facilityData && gameData) return; // Already loaded
+    
+    setIsLoadingData(true);
+    try {
+      // Fetch facility data
+      const facilityResponse = await fetch(`/api/facilities/${booking.facilityId}`);
+      if (facilityResponse.ok) {
+        const facility = await facilityResponse.json();
+        setFacilityData(facility);
+      }
+      
+      // Fetch game data
+      const gameResponse = await fetch(`/api/games/${booking.gameId}`);
+      if (gameResponse.ok) {
+        const game = await gameResponse.json();
+        setGameData(game);
+      }
+    } catch (error) {
+      console.error("Failed to fetch facility/game data:", error);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
 
   const generateQRCode = async () => {
     try {
@@ -36,8 +64,11 @@ export default function BookingReceipt({ booking, trigger }: BookingReceiptProps
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
-    if (open && !qrCodeUrl) {
-      generateQRCode();
+    if (open) {
+      if (!qrCodeUrl) {
+        generateQRCode();
+      }
+      fetchFacilityAndGameData();
     }
   };
 
@@ -113,9 +144,18 @@ export default function BookingReceipt({ booking, trigger }: BookingReceiptProps
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-gray-400" />
               <div>
-                <p className="font-medium text-sm">{booking.facility?.name || "Facility"}</p>
+                <p className="font-medium text-sm">
+                  {isLoadingData ? (
+                    <span className="text-gray-400">Loading facility...</span>
+                  ) : facilityData?.name || `Facility ID: ${booking.facilityId}`}
+                </p>
                 <p className="text-xs text-gray-500">
-                  {booking.facility?.address}, {booking.facility?.city}
+                  {isLoadingData ? (
+                    <span className="text-gray-400">Loading...</span>
+                  ) : facilityData?.address && facilityData?.city 
+                    ? `${facilityData.address}, ${facilityData.city}`
+                    : "Address not available"
+                  }
                 </p>
               </div>
             </div>
@@ -123,8 +163,18 @@ export default function BookingReceipt({ booking, trigger }: BookingReceiptProps
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-gray-400" />
               <div>
-                <p className="font-medium text-sm">{booking.game?.name || "Game"}</p>
-                <p className="text-xs text-gray-500">{booking.game?.sportType}</p>
+                <p className="font-medium text-sm">
+                  Sport
+                </p>
+                <p className="text-xs text-gray-500">
+                  {isLoadingData ? (
+                    <span className="text-gray-400">Loading...</span>
+                  ) : gameData?.sportType || 
+                      (booking.notes && booking.notes.includes('Sport:') 
+                        ? booking.notes.split('Sport:')[1].trim() 
+                        : "Sport type not available")
+                  }
+                </p>
               </div>
             </div>
 

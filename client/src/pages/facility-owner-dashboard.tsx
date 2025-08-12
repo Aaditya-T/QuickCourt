@@ -545,9 +545,9 @@ function FacilityCard({ facility, onDelete, onToggleStatus, onEdit, isToggling }
                 <span className="truncate">{facility.rating} ({facility.totalReviews})</span>
               </span>
             </div>
-            <p className="text-sm font-medium text-primary mt-1 truncate">
+            {/* <p className="text-sm font-medium text-primary mt-1 truncate">
               ₹{facility.pricePerHour}/hour
-            </p>
+            </p> */}
             
             {/* Approval Status */}
             <div className="flex items-center space-x-2 mt-1">
