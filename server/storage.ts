@@ -126,19 +126,28 @@ export class DatabaseStorage implements IStorage {
     let conditions = [eq(facilities.isActive, true), eq(facilities.isApproved, true)];
 
     if (filters?.city) {
-      conditions.push(like(facilities.city, `%${filters.city.toLowerCase()}%`));
+      // Use ILIKE for case-insensitive search and trim whitespace
+      const citySearch = filters.city.trim();
+      if (citySearch) {
+        conditions.push(sql`LOWER(${facilities.city}) LIKE LOWER(${`%${citySearch}%`})`);
+      }
     }
     if (filters?.sportType && filters.sportType !== "all" && filters.sportType !== "") {
       // Use SQL operator to check if the sport type is in the array
       conditions.push(sql`${filters.sportType} = ANY(${facilities.sportTypes})`);
     }
     if (filters?.searchTerm) {
-      conditions.push(
-        or(
-          like(facilities.name, `%${filters.searchTerm.toLowerCase()}%`),
-          like(facilities.description, `%${filters.searchTerm.toLowerCase()}%`)
-        )!
-      );
+      // Use ILIKE for case-insensitive search and trim whitespace
+      const searchTerm = filters.searchTerm.trim();
+      if (searchTerm) {
+        conditions.push(
+          or(
+            sql`LOWER(${facilities.name}) LIKE LOWER(${`%${searchTerm}%`})`,
+            sql`LOWER(${facilities.description}) LIKE LOWER(${`%${searchTerm}%`})`,
+            sql`LOWER(${facilities.address}) LIKE LOWER(${`%${searchTerm}%`})`
+          )!
+        );
+      }
     }
 
     // Apply sorting - default to rating desc

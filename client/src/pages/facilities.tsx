@@ -82,7 +82,9 @@ export default function Facilities() {
   const handleFilterChange = (field: string, value: string) => {
     // Convert "all" back to empty string for API filtering
     const filterValue = value === "all" ? "" : value;
-    const newFilters = { ...filters, [field]: filterValue };
+    // Trim whitespace for text inputs to improve search quality
+    const trimmedValue = (field === 'city' || field === 'searchTerm') ? filterValue.trim() : filterValue;
+    const newFilters = { ...filters, [field]: trimmedValue };
     setFilters(newFilters);
     
     // Update URL with new filters
@@ -165,7 +167,7 @@ export default function Facilities() {
                   </Label>
                   <Input
                     id="searchTerm"
-                    placeholder="Search by name..."
+                    placeholder="Search by name, description, or address..."
                     value={filters.searchTerm}
                     onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
                     className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
@@ -179,7 +181,7 @@ export default function Facilities() {
                   </Label>
                   <Input
                     id="city"
-                    placeholder="Enter city..."
+                    placeholder="Search by city, area, or location..."
                     value={filters.city}
                     onChange={(e) => handleFilterChange("city", e.target.value)}
                     className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
