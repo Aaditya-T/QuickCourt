@@ -168,7 +168,7 @@ export default function LocationMap({
             />
           </div>
           
-          <div className="flex gap-2">
+          {/* <div className="flex gap-2">
             <Button 
               onClick={getCurrentLocation} 
               size="sm"
@@ -178,7 +178,7 @@ export default function LocationMap({
               <Navigation className="w-4 h-4 mr-1" />
               Use My Location
             </Button>
-          </div>
+          </div> */}
         </div>
 
 

@@ -269,9 +269,6 @@ export function registerFacilityRoutes(app: Express, authenticateToken: any, req
 
   app.put("/api/facility-courts/:id", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
     try {
-      const facilityCourt = await storage.getFacilityCourts('');
-      // TODO: Implement getFacilityCourt by ID method if needed for ownership check
-      
       const updates = req.body;
       const updatedFacilityCourt = await storage.updateFacilityCourt(req.params.id, updates);
       if (!updatedFacilityCourt) {

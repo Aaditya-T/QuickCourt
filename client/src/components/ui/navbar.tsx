@@ -23,7 +23,6 @@ export default function Navbar() {
       return [
         { href: "/", label: "Home" },
         { href: "/facilities", label: "Find Courts" },
-        { href: "/matches", label: "Matches" }
       ];
     }
     
@@ -35,14 +34,11 @@ export default function Navbar() {
       case "admin":
         return [
           { href: "/", label: "Home" },
-          { href: "/facilities", label: "Find Courts" },
-          { href: "/matches", label: "Matches" }
         ];
       default: // regular users
         return [
           { href: "/", label: "Home" },
           { href: "/facilities", label: "Find Courts" },
-          { href: "/matches", label: "Matches" }
         ];
     }
   };
@@ -134,9 +130,6 @@ export default function Navbar() {
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
                       <p className="font-medium">{user.firstName} {user.lastName}</p>
-                      <p className="w-[200px] truncate text-sm text-muted-foreground">
-                        {user.email}
-                      </p>
                     </div>
                   </div>
                   <DropdownMenuItem asChild>
