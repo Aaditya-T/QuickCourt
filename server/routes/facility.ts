@@ -1,7 +1,9 @@
 import type { Express } from "express";
 import { storage } from "../storage";
-import { insertFacilitySchema, insertFacilityCourtSchema, insertReviewSchema } from "@shared/schema";
+import { insertFacilitySchema, insertFacilityCourtSchema, insertReviewSchema, facilities } from "@shared/schema";
 import { EmailService } from "../emailService";
+import { db } from "../db";
+import { eq } from "drizzle-orm";
 
 export function registerFacilityRoutes(app: Express, authenticateToken: any, requireRole: any) {
   // Facility routes
@@ -152,7 +154,8 @@ export function registerFacilityRoutes(app: Express, authenticateToken: any, req
 
   app.delete("/api/facilities/:id", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
     try {
-      const facility = await storage.getFacility(req.params.id);
+      // Get basic facility info for ownership check
+      const [facility] = await db.select().from(facilities).where(eq(facilities.id, req.params.id));
       if (!facility) {
         return res.status(404).json({ message: "Facility not found" });
       }
@@ -162,21 +165,25 @@ export function registerFacilityRoutes(app: Express, authenticateToken: any, req
         return res.status(403).json({ message: "Not authorized to delete this facility" });
       }
 
-      // Check if there are any active bookings for this facility (only if facility is approved)
-      if (facility.isApproved) {
-        const activeBookings = await storage.getBookingsByFacility(req.params.id);
-        const hasActiveBookings = activeBookings.some((booking: any) => 
-          new Date(booking.date) > new Date() && booking.status !== "cancelled"
-        );
-
-        if (hasActiveBookings) {
-          return res.status(400).json({ 
-            message: "Cannot delete facility with active or future bookings. Please cancel all bookings first." 
-          });
-        }
+      // Check deletion constraints
+      const constraints = await storage.checkFacilityDeletionConstraints(req.params.id);
+      
+      if (!constraints.canDelete) {
+        // Return detailed information about why deletion is not allowed
+        return res.status(400).json({
+          message: constraints.message,
+          canDelete: false,
+          constraints: {
+            hasBookings: constraints.hasBookings,
+            hasMatches: constraints.hasMatches,
+            hasReviews: constraints.hasReviews
+          },
+          suggestion: "Please delist the facility instead of deleting it to preserve historical data."
+        });
       }
 
-      const success = await storage.hardDeleteFacility(req.params.id);
+      // If we can delete, use the safe deletion method
+      const success = await storage.safeDeleteFacility(req.params.id);
       if (success) {
         res.json({ message: "Facility deleted successfully" });
       } else {
@@ -184,6 +191,35 @@ export function registerFacilityRoutes(app: Express, authenticateToken: any, req
       }
     } catch (error) {
       res.status(500).json({ message: "Failed to delete facility", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  // Delist facility (set as inactive instead of deleting)
+  app.patch("/api/facilities/:id/delist", authenticateToken, requireRole(["facility_owner", "admin"]), async (req: any, res) => {
+    try {
+      const facility = await storage.getFacility(req.params.id);
+      if (!facility) {
+        return res.status(404).json({ message: "Facility not found" });
+      }
+
+      // Check ownership (unless admin)
+      if (req.user.role !== "admin" && facility.ownerId !== req.user.userId) {
+        return res.status(403).json({ message: "Not authorized to delist this facility" });
+      }
+
+      // Set facility as inactive
+      const updatedFacility = await storage.updateFacility(req.params.id, { isActive: false });
+      
+      if (updatedFacility) {
+        res.json({ 
+          message: "Facility delisted successfully",
+          facility: updatedFacility
+        });
+      } else {
+        res.status(500).json({ message: "Failed to delist facility" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delist facility", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 

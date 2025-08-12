@@ -92,6 +92,16 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUserRole(id: string, role: string): Promise<boolean>;
   updateFacilityApproval(id: string, isApproved: boolean, rejectionReason?: string, approvedBy?: string): Promise<boolean>;
+  
+  // Facility deletion constraint checking
+  checkFacilityDeletionConstraints(facilityId: string): Promise<{
+    canDelete: boolean;
+    hasBookings: boolean;
+    hasMatches: boolean;
+    hasReviews: boolean;
+    message?: string;
+  }>;
+  safeDeleteFacility(facilityId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -209,7 +219,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFacilitiesByOwner(ownerId: string): Promise<Facility[]> {
-    return await db.select().from(facilities).where(eq(facilities.ownerId, ownerId)).orderBy(desc(facilities.createdAt));
+    const ownerFacilities = await db.select().from(facilities).where(eq(facilities.ownerId, ownerId)).orderBy(desc(facilities.createdAt));
+    
+    // Enrich each facility with its courts
+    const enrichedFacilities = await Promise.all(
+      ownerFacilities.map(async (facility) => {
+        const courts = await this.getFacilityCourts(facility.id);
+        return {
+          ...facility,
+          facilityCourts: courts
+        } as any;
+      })
+    );
+    
+    return enrichedFacilities;
   }
 
   async createFacility(facility: InsertFacility): Promise<Facility> {
@@ -1008,7 +1031,67 @@ export class DatabaseStorage implements IStorage {
     return user[0];
   }
 
-  
+  // Facility deletion constraint checking
+  async checkFacilityDeletionConstraints(facilityId: string): Promise<{
+    canDelete: boolean;
+    hasBookings: boolean;
+    hasMatches: boolean;
+    hasReviews: boolean;
+    message?: string;
+  }> {
+    // Check for any bookings (past or future)
+    const bookings = await this.getBookingsByFacility(facilityId);
+    const hasBookings = bookings.length > 0;
+
+    // Check for any matches (past or future)
+    const facilityMatches = await db.select().from(matches).where(eq(matches.facilityId, facilityId));
+    const hasMatches = facilityMatches.length > 0;
+
+    // Check for any reviews
+    const reviews = await this.getReviewsByFacility(facilityId);
+    const hasReviews = reviews.length > 0;
+
+    // If there are any historical records, we cannot delete
+    if (hasBookings || hasMatches || hasReviews) {
+      return {
+        canDelete: false,
+        hasBookings,
+        hasMatches,
+        hasReviews,
+        message: "This facility has historical data (bookings, matches, or reviews) and cannot be deleted. Please delist the facility instead."
+      };
+    }
+
+    return {
+      canDelete: true,
+      hasBookings: false,
+      hasMatches: false,
+      hasReviews: false
+    };
+  }
+
+  async safeDeleteFacility(facilityId: string): Promise<boolean> {
+    try {
+      // First check if we can delete
+      const constraints = await this.checkFacilityDeletionConstraints(facilityId);
+      if (!constraints.canDelete) {
+        return false;
+      }
+
+      // Delete facility courts first (no foreign key constraints)
+      const courts = await this.getFacilityCourts(facilityId);
+      for (const court of courts) {
+        await this.deleteFacilityCourt(court.id);
+      }
+
+      // Now delete the facility
+      const result = await db.delete(facilities).where(eq(facilities.id, facilityId));
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      console.error('Error in safeDeleteFacility:', error);
+      return false;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

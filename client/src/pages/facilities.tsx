@@ -246,13 +246,6 @@ export default function Facilities() {
                 </div>
               </div>
 
-              {/* Search Button */}
-              <div className="flex justify-center">
-                <Button onClick={handleSearch} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg px-8">
-                  <Search className="w-4 h-4 mr-2" />
-                  Search Facilities
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>

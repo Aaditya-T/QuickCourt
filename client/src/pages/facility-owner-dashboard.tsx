@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import Navbar from "@/components/ui/navbar";
 import FacilityModal from "@/components/ui/facility-modal";
-import ConfirmDialog from "@/components/ui/confirm-dialog";
+import FacilityDeletionDialog from "@/components/ui/facility-deletion-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,7 @@ export default function FacilityOwnerDashboard() {
   const [facilityToEdit, setFacilityToEdit] = useState<any>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [facilityToDelete, setFacilityToDelete] = useState<any>(null);
+  const [deletionConstraints, setDeletionConstraints] = useState<any>(null);
   const [facilityFilter, setFacilityFilter] = useState<"all" | "active" | "inactive" | "pending" | "approved" | "rejected">("all");
 
   // Fetch facilities owned by the user
@@ -63,9 +64,50 @@ export default function FacilityOwnerDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
     },
     onError: (error: any) => {
+      // Check if deletion failed due to constraints
+      if (error.status === 400 && error.data?.canDelete === false) {
+        // Show constraint information and suggest delisting
+        const constraints = error.data.constraints;
+        const constraintDetails = [];
+        if (constraints.hasBookings) constraintDetails.push("bookings");
+        if (constraints.hasMatches) constraintDetails.push("matches");
+        if (constraints.hasReviews) constraintDetails.push("reviews");
+        
+        toast({
+          title: "Cannot Delete Facility",
+          description: `This facility has historical ${constraintDetails.join(", ")} and cannot be deleted. Please delist it instead.`,
+          variant: "destructive",
+        });
+        
+        // Set the deletion constraints for the dialog
+        setDeletionConstraints(constraints);
+        setDeleteConfirmOpen(true);
+      } else {
+        toast({
+          title: "Delete Failed",
+          description: error.message || "Failed to delete facility.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  // Delist facility mutation
+  const delistFacilityMutation = useMutation({
+    mutationFn: async (facilityId: string) => {
+      return await apiRequest(`/api/facilities/${facilityId}/delist`, "PATCH", {});
+    },
+    onSuccess: () => {
       toast({
-        title: "Delete Failed",
-        description: error.message || "Failed to delete facility.",
+        title: "Facility Delisted",
+        description: "Your facility has been delisted and is no longer visible to users.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delist Failed",
+        description: error.message || "Failed to delist facility.",
         variant: "destructive",
       });
     },
@@ -486,26 +528,31 @@ export default function FacilityOwnerDashboard() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
+      <FacilityDeletionDialog
         open={deleteConfirmOpen}
         onClose={() => {
           setDeleteConfirmOpen(false);
           setFacilityToDelete(null);
+          setDeletionConstraints(null);
         }}
-        onConfirm={() => {
+        facility={facilityToDelete}
+        onDelete={() => {
           if (facilityToDelete) {
             deleteFacilityMutation.mutate(facilityToDelete.id);
             setDeleteConfirmOpen(false);
             setFacilityToDelete(null);
-
-            queryClient.invalidateQueries({ queryKey: ["/api/owner/facilities"] });
           }
         }}
-        title="Delete Facility"
-        description={`Are you sure you want to delete "${facilityToDelete?.name}"? This action cannot be undone and will remove all associated data.`}
-        confirmText="Delete Facility"
-        cancelText="Cancel"
-        variant="destructive"
+        onDelist={() => {
+          if (facilityToDelete) {
+            delistFacilityMutation.mutate(facilityToDelete.id);
+            setDeleteConfirmOpen(false);
+            setFacilityToDelete(null);
+          }
+        }}
+        isDeleting={deleteFacilityMutation.isPending}
+        isDelisting={delistFacilityMutation.isPending}
+        deletionConstraints={deletionConstraints}
       />
     </div>
   );
