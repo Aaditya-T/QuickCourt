@@ -1,9 +1,9 @@
-# QuickCourt
+# QuickCourt — A Local Sports Facility Booking Platform
 
 <br />
 <div align="center">
   <a href="https://github.com/Aaditya-T/QuickCourt">
-    <img src="client/public/logo.png" alt="Logo" width="120" height="120">
+    <img src="client/public/logo.png" alt="Logo" width="240" height="240">
   </a>
 
   <h3 align="center">QuickCourt</h3>
@@ -17,14 +17,13 @@
   </p>
 </div>
 
-## 🏆 Hackathon Achievement
+## 🏆 Achievement
 
 This project was created for **Odoo Hackathon August 2025**, a prestigious hackathon where we proudly secured a position among the **top teams**. The entire platform was built from concept to working prototype in just **24 hours**.
 
 ![Hackathon](https://img.shields.io/badge/Odoo_Hackathon_2025-Top_Team-gold?style=for-the-badge&logo=trophy&logoColor=white)
 [![Contributors](https://img.shields.io/github/contributors/Aaditya-T/QuickCourt?style=for-the-badge)](https://github.com/Aaditya-T/QuickCourt/graphs/contributors)
 [![Stars](https://img.shields.io/github/stars/Aaditya-T/QuickCourt?style=for-the-badge)](https://github.com/Aaditya-T/QuickCourt/stargazers)
-[![Issues](https://img.shields.io/github/issues/Aaditya-T/QuickCourt?style=for-the-badge)](https://github.com/Aaditya-T/QuickCourt/issues)
 
 ## 👥 Contributors
 
@@ -126,8 +125,9 @@ This platform bridges the gap between sports facility management and community e
 - **AWS S3** for file uploads and storage
 - **React Query** for server state management
 
-<details>
-<summary><strong>🚀 Getting Started</strong></summary>
+---
+
+## Getting Started
 
 ### Prerequisites
 
@@ -137,6 +137,10 @@ Make sure you have the following installed:
 - **PostgreSQL** database
 - **AWS S3** bucket (for file uploads)
 - **Stripe** account (for payments)
+
+<details>
+<summary><strong>Want to install QuickCourt?</strong></summary>
+
 
 ### Installation
 
@@ -187,6 +191,8 @@ Make sure you have the following installed:
    
    Navigate to [http://localhost:3000](http://localhost:3000) to see the application running.
 
+</details>
+
 ### Available Scripts
 
 | Command | Description |
@@ -197,8 +203,6 @@ Make sure you have the following installed:
 | `npm run check` | TypeScript type checking |
 | `npm run db:push` | Push schema to database |
 | `npm run db:generate` | Generate migrations |
-
-</details>
 
 ## Project Structure
 
