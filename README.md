@@ -3,19 +3,40 @@
 <br />
 <div align="center">
   <a href="https://github.com/Aaditya-T/QuickCourt">
-    <img src="client/public/logo.png" alt="Logo" width="240" height="240">
+    <img src="client/public/git-logo.png" alt="Logo">
   </a>
 
   <h3 align="center">QuickCourt</h3>
 
   <p align="center">
-    A modern sports facility booking platform that connects athletes with local courts and enables community match organization
+    A modern sports facility booking platform that connects players with local courts and enables community match organization
     <br />
-    <strong>🏆 Odoo Hackathon August 2025 - Top Team Project</strong>
+    <strong>🏆 Odoo Hackathon August 2025</strong>
     <br />
-    Built by Team ZeroDay in 24 hours
+    Built by Team ZeroDay
   </p>
 </div>
+
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li><a href="#-achievement">Achievement</a></li>
+    <li><a href="#-contributors">Contributors</a></li>
+    <li><a href="#why-quickcourt">Why QuickCourt?</a></li>
+    <li><a href="#project-purpose">Project Purpose</a></li>
+    <li><a href="#key-features">Key Features</a></li>
+    <li><a href="#tech-stack">Tech Stack</a></li>
+    <li><a href="#getting-started">Getting Started</a></li>
+    <li><a href="#project-structure">Project Structure</a></li>
+    <li><a href="#architecture--scalability">Architecture & Scalability</a></li>
+    <li><a href="#performance--metrics">Performance & Metrics</a></li>
+    <li><a href="#security--best-practices">Security & Best Practices</a></li>
+    <li><a href="#business-impact">Business Impact</a></li>
+    <li><a href="#lessons-learned">Lessons Learned</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a></li>
+  </ol>
+</details>
 
 ## 🏆 Achievement
 
@@ -27,7 +48,7 @@ This project was created for **Odoo Hackathon August 2025**, a prestigious hacka
 
 ## 👥 Contributors
 
-**Project Lead: [Naishadh Rana](https://github.com/Zenith1009)** 🎯
+**Project Lead: [Naishadh Rana](https://github.com/Zenith1009)**
 
 <table>
 <tr>
@@ -70,27 +91,35 @@ This project was created for **Odoo Hackathon August 2025**, a prestigious hacka
 </tr>
 </table>
 
-## Project Purpose
+## Why QuickCourt?
 
-QuickCourt serves as a comprehensive sports facility booking platform designed to:
+We built QuickCourt because booking sports facilities is still stuck in 2005. Most places still rely on phone calls, and finding pickup games with other players is nearly impossible. 
 
-- **Connect** sports enthusiasts with local facilities for various sports like badminton, tennis, basketball
-- **Enable** seamless booking with real-time availability and secure payment processing
-- **Foster** community engagement through match organization and participation features
-- **Empower** facility owners with management tools and analytics dashboards
-- **Provide** administrators with comprehensive oversight and reporting capabilities
+**What we solved:**
+- Find courts instantly with real filters (sport, location, price)
+- Book and pay online in under a minute
+- Organize matches and connect with other players
+- Give facility owners proper tools to manage their business
 
-This platform bridges the gap between sports facility management and community engagement, making sports more accessible for everyone.
+**Tech highlights:**
+- Full TypeScript stack (React + Node.js + PostgreSQL)
+- Real-time booking updates with WebSockets
+- Stripe payments with AWS S3 file uploads
+- Built in 24 hours during Odoo Hackathon 2025
 
-## Key Features
+## What We Built
 
-- **Smart Facility Search** - Advanced filtering by sport type, location, price range, and amenities
-- **Time-slot Booking System** - Real-time availability checking with conflict prevention
-- **Community Match Making** - Create and join matches with other players
-- **Payment Integration** - Secure payment processing with Stripe
-- **Owner Dashboard** - Complete facility management with analytics
-- **Admin Panel** - User management and platform oversight
-- **Mobile Responsive** - Optimized for all devices and screen sizes
+A sports booking platform with three main user types:
+- **Players** - search, book, and organize matches
+- **Facility Owners** - manage courts and track revenue  
+- **Admins** - oversee the platform and approve new facilities
+
+**Key features:**
+- Smart facility search with real-time availability
+- Stripe payment integration with booking confirmations
+- Match organization and community features
+- Owner analytics dashboard
+- Mobile-responsive design
 
 ## Tech Stack
 
@@ -213,14 +242,61 @@ QuickCourt/
 │   │   ├── components/     # Reusable UI components
 │   │   ├── pages/          # Application pages
 │   │   ├── hooks/          # Custom React hooks
-│   │   ├── lib/           # Utilities and configurations
-│   │   └── types/         # TypeScript type definitions
-├── server/                # Express backend
-│   ├── routes/           # API route handlers
-│   └── services/         # Business logic services
-├── shared/               # Shared types and validations
-└── migrations/           # Database migrations
+│   │   ├── lib/            # Utilities and configurations
+│   │   └── types/          # TypeScript type definitions
+├── server/                 # Express backend
+│   ├── routes/             # API route handlers
+│   └── services/           # Business logic services
+├── shared/                 # Shared types and validations
+└── migrations/             # Database migrations
 ```
+
+## Architecture & Performance
+
+**System Design:**
+- Clean separation: React frontend, Express backend, shared types
+- PostgreSQL with Drizzle ORM for type-safe database operations
+- React Query for server state management
+- AWS S3 for file uploads with presigned URLs
+
+**Build Stats:**
+- Main bundle: 1.36 MB (408 KB gzipped)
+- CSS: 103 KB (21 KB gzipped) 
+- Backend: 112 KB optimized Node.js build
+- Build time: ~29 seconds
+
+**What Works Well:**
+- TypeScript caught tons of bugs during our 24-hour sprint
+- React Query made state management painless
+- Drizzle ORM + PostgreSQL handled complex booking relationships
+- shadcn/ui components saved us hours of UI work
+
+## Security & Best Practices
+
+We implemented proper security from day one:
+- JWT authentication with bcrypt password hashing
+- Input validation with Zod schemas on both client and server
+- SQL injection protection through Drizzle ORM
+- Environment variables for all sensitive data
+- HTTPS enforcement for all data transmission
+
+## Hackathon Experience
+
+**The Challenge:** Build a complete platform in 24 hours for Odoo Hackathon 2025
+
+**What we achieved:**
+- Full booking system with payment processing
+- Three different user dashboards
+- Real-time features with WebSocket integration
+- Responsive design that works on mobile
+- **Result: Top team finish!**
+
+**Key lessons:**
+- TypeScript saved us from debugging nightmares at 3 AM
+- Starting with a solid component system (shadcn/ui) was crucial
+- We focused on core booking flow first, then added features
+- Team coordination and clear roles made all the difference
+- Some planned features didn't make it, but the core experience was solid
 
 ## Acknowledgments
 
@@ -233,6 +309,6 @@ QuickCourt/
 
 <div align="center">
 
-**Made with enthusiasm and passion by Team ZeroDay during Odoo Hackathon August 2025**
+**Made with enthusiasm and passion** <sub>(and caffeine)</sub> **by Team ZeroDay during Odoo Hackathon August 2025**
 
 </div>
